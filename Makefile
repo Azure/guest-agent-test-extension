@@ -7,7 +7,7 @@ GOGET=${GOCMD} get
 GOTEST=${GOCMD} test
 GORUN=${GOCMD} run 
 
-BINARY_NAME=guest-agent-test-extension
+BINARY_NAME=bin/guest-agent-test-extension
 WINDOWS_BIN=$(BINARY_NAME)_windows_amd64.exe
 LINUX_BIN=$(BINARY_NAME)_linux_amd64
 
