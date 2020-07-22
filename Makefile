@@ -8,8 +8,8 @@ GOTEST=${GOCMD} test
 GORUN=${GOCMD} run 
 
 BINARY_NAME=bin/guest-agent-test-extension
-WINDOWS_BIN=$(BINARY_NAME)_windows_amd64.exe
-LINUX_BIN=$(BINARY_NAME)_linux_amd64
+WINDOWS_BIN=$(BINARY_NAME)_windows.exe
+LINUX_BIN=$(BINARY_NAME)_linux
 
 .PHONY: all
 all: clean build_all
