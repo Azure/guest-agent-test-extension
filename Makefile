@@ -1,22 +1,40 @@
+SHELL := /bin/bash
+
 GOCMD=go
 GOBUILD=${GOCMD} build
 GOCLEAN=${GOCMD} clean
 GOGET=${GOCMD} get
 GOTEST=${GOCMD} test
 GORUN=${GOCMD} run 
-BINARY_NAME=guest-agent-test-extension.exe
+
+BINARY_NAME=guest-agent-test-extension
+WINDOWS_BIN=$(BINARY_NAME)_windows_amd64.exe
+LINUX_BIN=$(BINARY_NAME)_linux_amd64
 
 .PHONY: all
-all: clean build
+all: clean build_all
 
 .PHONY: test
 test: 
 	${GOTEST} -v
 
 
-.PHONY: build
-build: deps
-	${GOBUILD} -o ${BINARY_NAME} -v
+.PHONY: build_all
+build_all: build_windows build_linux
+	@echo version: $(VERSION)
+
+
+.PHONY: build_windows
+build_windows: deps
+	$(GOCMD) env GOOS=windows 
+	${GOBUILD} -o ${WINDOWS_BIN} -v
+
+.PHONY: build_linux
+build_linux: deps
+	$(GOCMD) env GOOS=linux
+	${GOBUILD} -o ${LINUX_BIN} -v
+
+
 
 .PHONY: deps
 deps:
@@ -29,7 +47,5 @@ deps:
 clean:
 	${GOCLEAN}
 
-
-.PHONY: help
 help:
 	@echo "TODO"
