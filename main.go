@@ -30,21 +30,6 @@ func install() {
 }
 
 func enable() {
-	birdJSON := `{"birds":{"pigeon":"head bobbing","eagle":"america?"},"animals":"none"}`
-
-	var result map[string]interface{}
-	json.Unmarshal([]byte(birdJSON), &result)
-
-	// The object stored in the "birds" key is also stored as
-	// a map[string]interface{} type, and its type is asserted from
-	// the interface{} type
-	birds := result["birds"].(map[string]interface{})
-
-	for key, value := range birds {
-		// Each value is an interface{} type, that is type asserted as a string
-		fmt.Println(key, value.(string))
-	}
-
 	fmt.Println("Enabled Successfully.")
 }
 
