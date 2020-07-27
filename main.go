@@ -9,15 +9,23 @@ import (
 	"github.com/go-kit/kit/log"
 )
 
+var (
+	version = "1.0.0.0"
+)
+
 func install() {
 	operation := "install"
 	msg := "Installed Successfully."
 
 	// Configuring logger to print time and verison by default
 	logger := log.NewLogfmtLogger(log.NewSyncWriter(os.Stdout))
-	logger = log.With(logger, "time", log.DefaultTimestamp, "version", "1.0.0.0")
+	logger = log.With(logger, "time", log.DefaultTimestamp, "version", version)
 
 	logger.Log("event", operation, "message", msg)
+
+	/*	Format: time=XX version=XX event=XX message=XX
+		Example: time=2020-XX-27T10:14:34.9357863-07:00 version=1.0.0.0 event=install message="Installed Successfully."
+	*/
 }
 
 func enable() {
@@ -55,9 +63,7 @@ func main() {
 	if len(os.Args[1:]) > 0 {
 		for _, a := range os.Args[1:] {
 			/*	TODO : Not sure if there is a better method in regexp so don't need multiple vars
-				TODO : Since there are only the 5 commands that should be called, this could be changed
-				to just check for os.Args[1] and compare equality (ignore case)
-			*/
+			 */
 			matchDisable, _ := regexp.MatchString("^([-/]*)(disable)", a)
 			matchUninstall, _ := regexp.MatchString("^([-/]*)(uninstall)", a)
 			matchInstall, _ := regexp.MatchString("^([-/]*)(install)", a)
@@ -75,7 +81,14 @@ func main() {
 			} else if matchUpdate {
 				update()
 			} else {
-				fmt.Println("Command Not Recognized.")
+				matchJSON, _ := regexp.MatchString("^([-/]*)(jsonfile=)", a)
+
+				// This is a workaround for when "." is included in the command line args, it separates the args
+				// TODO: implement this in a smarter way
+				if matchJSON {
+					s := a[10:] + ".json"
+					parseJSON(s)
+				}
 			}
 		}
 	} else {
