@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"regexp"
 
@@ -57,6 +58,38 @@ func uninstall() {
 
 func update() {
 	fmt.Println("Updated Successfully.")
+}
+
+func parseJSON(s string) {
+	//	Open the provided file
+	jsonFile, err := os.Open(s)
+	if err != nil {
+		fmt.Println("File Not Found")
+	}
+	fmt.Println("File opened successfully")
+
+	// Defer file closing until parseJSON() returns to its caller
+	defer jsonFile.Close()
+
+	//	Unmarshall the bytes from the JSON file
+	// 	TODO: If we know the exact format, we can read the JSON into a struct which might be cleaner
+	byteValue, _ := ioutil.ReadAll(jsonFile)
+	var result map[string]interface{}
+	json.Unmarshal([]byte(byteValue), &result)
+
+	// Get the map with the name "keys"
+	keys := result["keys"].(map[string]interface{})
+
+	//	Parse each key value and reverse the string by appending characters backwards
+	for key, value := range keys {
+		reverseValue := ""
+		for _, val := range value.(string) {
+			reverseValue = string(val) + reverseValue
+		}
+
+		fmt.Println(key, reverseValue)
+	}
+
 }
 
 func main() {
