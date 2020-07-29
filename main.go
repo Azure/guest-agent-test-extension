@@ -45,11 +45,14 @@ func update() {
 	fmt.Println("Updated Successfully.")
 }
 
-func parseJSON(s string) {
+// Can be called with jsonfile=test (for example if you have a test.json file)
+// TODO: Make accepting "jsonfile=test.json" possible
+func parseJSON(jsonFilePath string) {
 	//	Open the provided file
-	jsonFile, err := os.Open(s)
+	jsonFile, err := os.Open(jsonFilePath)
 	if err != nil {
 		fmt.Println("File Not Found")
+		os.Exit(1)
 	}
 	fmt.Println("File opened successfully")
 
