@@ -3,26 +3,23 @@ package main
 import (
 	"encoding/json"
 	"flag"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
-	"time"
 )
 
 var (
 	version            = "1.0.0.0"
 	extensionShortName = "GATestExt"
-	// Logging is currently set up to create/add to the logile in the directory from where the binary
-	// is exectued. TODO: Add absolute filepath
-	logfile     = "guest-agent-test-extension.log"
-	logWriter   *os.File
+	// Logging is currently set up to create/add to the logile in the directory from where the binary is executed
+	logfile = "guest-agent-test-extension.log"
+
 	infoLogger  *log.Logger
 	errorLogger *log.Logger
 )
 
 func install() {
-	logInfo("Installed Succesfully.")
+	infoLogger.Println("Installed Succesfully.")
 }
 
 func enable() {
@@ -78,41 +75,27 @@ func parseJSON(s string) {
 *
 *	The main difference between types of loggers is the label (eg INFO) and additional data provided .
  */
-func initLogging() {
+func initLogging() *os.File {
 	// Open the file as read only
-	var err error
-	logWriter, err = os.OpenFile(logfile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
+	file, err := os.OpenFile(logfile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
 	if err != nil {
 		errorLogger.Println("Error opening file: ", logfile)
 		log.Fatal(err)
 	}
-}
 
-func logInfo(message string) {
-	logMesssage := fmt.Sprintf(logfile, "%s %s %s INFO %s",
-		time.Now().UTC().Format("2006-01-02T15:04:05.999999Z"), extensionShortName, version, message)
+	// Format the timestamp to match the UTC format from the waagent log files
+	// Sample out: 2020-07-29T01:10:53.960425Z GATestExt version: 1.0.0.0 INFO main.go:22: Hello World!
+	infoLogger = log.New(file, "INFO ", log.LUTC|log.Ldate|log.Ltime|log.Lmicroseconds|log.Lshortfile)
 
-	fmt.Fprintf(logWriter, "%s\n", logMesssage)
-}
-
-func logWarning(message string) {
-	logMesssage := fmt.Sprintf(logfile, "%s %s %s WARNING %s",
-		time.Now().UTC().Format("2006-01-02T15:04:05.999999Z"), extensionShortName, version, message)
-
-	fmt.Fprintf(logWriter, "%s\n", logMesssage)
-}
-
-func logError(message string) {
-	logMesssage := fmt.Sprintf(logfile, "%s %s %s ERROR %s",
-		time.Now().UTC().Format("2006-01-02T15:04:05.999999Z"), extensionShortName, version, message)
-
-	fmt.Fprintf(logWriter, "%s\n", logMesssage)
+	// Sample out: 2020-07-29T01:10:53.960425Z GATestExt version: 1.0.0.0 ERROR main.go:22: Hello World!
+	errorLogger = log.New(file, "ERROR ", log.LUTC|log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile)
+	return file
 }
 
 func main() {
 	// Manage closing of the file automatically once main returns
-	initLogging()
-	defer logWriter.Close()
+	file := initLogging()
+	defer file.Close()
 
 	// Command line flags that are currently supported
 	commandStringPtr := flag.String("command", "", "Desired command (install, enable, update, disable, uninstall")
