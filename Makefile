@@ -8,6 +8,7 @@ GOTEST=${GOCMD} test
 GORUN=${GOCMD} run 
 
 BINARY_NAME=bin/guest-agent-test-extension
+LOGFILE=guest-agent-test-extension.log
 WINDOWS_BIN=$(BINARY_NAME)_windows.exe
 LINUX_BIN=$(BINARY_NAME)_linux
 
@@ -21,7 +22,6 @@ test:
 
 .PHONY: build_all
 build_all: build_windows build_linux
-	@echo version: $(VERSION)
 
 
 .PHONY: build_windows
@@ -38,14 +38,15 @@ build_linux: deps
 
 .PHONY: deps
 deps:
-	${GOGET} -u "github.com/go-kit/kit/log"
 	${GOGET} -u "github.com/Azure/azure-extension-foundation/sequence"
 	${GOGET} -u "github.com/Azure/azure-extension-foundation/settings"
 	${GOGET} -u "github.com/Azure/azure-extension-foundation/status"
 
 .PHONY: clean
 clean:
+	rm $(LOGFILE)
 	${GOCLEAN}
+	
 
 help:
 	@echo "TODO"
