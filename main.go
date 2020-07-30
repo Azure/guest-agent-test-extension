@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"regexp"
 
@@ -29,21 +30,6 @@ func install() {
 }
 
 func enable() {
-	birdJSON := `{"birds":{"pigeon":"head bobbing","eagle":"america?"},"animals":"none"}`
-
-	var result map[string]interface{}
-	json.Unmarshal([]byte(birdJSON), &result)
-
-	// The object stored in the "birds" key is also stored as
-	// a map[string]interface{} type, and its type is asserted from
-	// the interface{} type
-	birds := result["birds"].(map[string]interface{})
-
-	for key, value := range birds {
-		// Each value is an interface{} type, that is type asserted as a string
-		fmt.Println(key, value.(string))
-	}
-
 	fmt.Println("Enabled Successfully.")
 }
 
@@ -57,6 +43,41 @@ func uninstall() {
 
 func update() {
 	fmt.Println("Updated Successfully.")
+}
+
+// Can be called with jsonfile=test (for example if you have a test.json file)
+// TODO: Make accepting "jsonfile=test.json" possible
+func parseJSON(jsonFilePath string) {
+	//	Open the provided file
+	jsonFile, err := os.Open(jsonFilePath)
+	if err != nil {
+		fmt.Println("File Not Found")
+		os.Exit(1)
+	}
+	fmt.Println("File opened successfully")
+
+	// Defer file closing until parseJSON() returns to its caller
+	defer jsonFile.Close()
+
+	//	Unmarshall the bytes from the JSON file
+	// 	TODO: If we know the exact format, we can read the JSON into a struct which might be cleaner
+	byteValue, _ := ioutil.ReadAll(jsonFile)
+	var result map[string]interface{}
+	json.Unmarshal([]byte(byteValue), &result)
+
+	// Get the map with the name "keys"
+	keys := result["keys"].(map[string]interface{})
+
+	//	Parse each key value and reverse the string by appending characters backwards
+	for key, value := range keys {
+		reverseValue := ""
+		for _, val := range value.(string) {
+			reverseValue = string(val) + reverseValue
+		}
+
+		fmt.Println(key, reverseValue)
+	}
+
 }
 
 func main() {
