@@ -3,6 +3,8 @@ package main
 import (
 	"encoding/json"
 	"flag"
+	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"os"
@@ -75,31 +77,43 @@ func parseJSON(s string) {
 *
 *	The main difference between types of loggers is the label (eg INFO) and additional data provided .
  */
-func initLogging() *os.File {
+func initLogging() (*os.File, error) {
 	// Open the file as read only
 	file, err := os.OpenFile(logfile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
 	if err != nil {
-		errorLogger.Println("Error opening file: ", logfile)
-		log.Fatal(err)
+		return nil, err
 	}
 
 	// Format the timestamp to match the UTC format from the waagent log files
-	// Sample out: 2020-07-29T01:10:53.960425Z GATestExt version: 1.0.0.0 INFO main.go:22: Hello World!
+	// Sample out: INFO 2020-07-29 01:10:53.960425Z GATestExt version: 1.0.0.0 main.go:22: Hello World!
 	infoLogger = log.New(file, "INFO ", log.LUTC|log.Ldate|log.Ltime|log.Lmicroseconds|log.Lshortfile)
 
-	// Sample out: 2020-07-29T01:10:53.960425Z GATestExt version: 1.0.0.0 ERROR main.go:22: Hello World!
-	errorLogger = log.New(file, "ERROR ", log.LUTC|log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile)
-	return file
+	// infoLogger.SetPrefix(time.Now().UTC().Format("2006-01-02T15:04:05.999999Z") + " " +
+	// 	extensionShortName + " " + version + " INFO ")
+
+	// Sample out: ERROR 2020-07-29 01:10:53.960425Z GATestExt version: 1.0.0.0 main.go:22: Hello World!
+	errorLogger = log.New(file, "ERROR ", log.LUTC|log.Ldate|log.Ltime|log.Lmicroseconds|log.Lshortfile)
+
+	// Configure error logging to std err as well
+	multi := io.MultiWriter(file, os.Stderr)
+	errorLogger.SetOutput(multi)
+
+	return file, nil
 }
 
 func main() {
 	// Manage closing of the file automatically once main returns
-	file := initLogging()
+	// TODO Add more robust error handling
+	file, err := initLogging()
+	if err != nil {
+		fmt.Println("Error opening the provided logfile.")
+		os.Exit(1)
+	}
 	defer file.Close()
 
 	// Command line flags that are currently supported
-	commandStringPtr := flag.String("command", "", "Desired command (install, enable, update, disable, uninstall")
-	parseJSONPtr := flag.String("jsonfile", "", "Path to the JSON file loction")
+	commandStringPtr := flag.String("command", "", "Valid commands are install, enable, update, disable and uninstall. Usage: --command=install")
+	parseJSONPtr := flag.String("jsonfile", "", "Path to the JSON file loction. Usage --jsonfile=\"test.json\"")
 
 	// Trigger parsing of the command flag and then run the corresponding command
 	flag.Parse()
