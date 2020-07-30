@@ -40,9 +40,9 @@ func update() {
 	infoLogger.Println("Updated Successfully.")
 }
 
-func parseJSON(s string) error {
+func parseJSON(filename string) error {
 	//	Open the provided file
-	jsonFile, err := os.Open(s)
+	jsonFile, err := os.Open(filename)
 	if err != nil {
 		errorLogger.Println("File Not Found. JSON Parsing not performed.")
 		return err
