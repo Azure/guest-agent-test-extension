@@ -40,12 +40,12 @@ func update() {
 	infoLogger.Println("Updated Successfully.")
 }
 
-func parseJSON(s string) {
+func parseJSON(s string) error {
 	//	Open the provided file
 	jsonFile, err := os.Open(s)
 	if err != nil {
 		errorLogger.Println("File Not Found. JSON Parsing not performed.")
-		os.Exit(1)
+		return err
 	}
 	infoLogger.Println("File opened successfully")
 
@@ -70,7 +70,7 @@ func parseJSON(s string) {
 
 		infoLogger.Println(key, reverseValue)
 	}
-
+	return nil
 }
 
 /* 	Open the logfile and configure the loggers that will be used
@@ -134,6 +134,10 @@ func main() {
 
 	// Parse the provided JSON file if there is one
 	if *parseJSONPtr != "" {
-		parseJSON(*parseJSONPtr)
+		err := parseJSON(*parseJSONPtr)
+		// TODO Add more robust error handling
+		if err != nil {
+			os.Exit(1)
+		}
 	}
 }
