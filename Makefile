@@ -40,6 +40,7 @@ deps:
 	${GOGET} -u "github.com/Azure/azure-extension-foundation/sequence"
 	${GOGET} -u "github.com/Azure/azure-extension-foundation/settings"
 	${GOGET} -u "github.com/Azure/azure-extension-foundation/status"
+	${GOGET} -u "github.com/pkg/errors"
 
 .PHONY: clean
 clean:
