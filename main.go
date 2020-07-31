@@ -45,6 +45,7 @@ func update() {
 	infoLogger.Println("Updated Successfully.")
 }
 
+
 func parseJSON(filename string) error {
 	//	Open the provided file
 	jsonFile, err := os.Open(filename)
