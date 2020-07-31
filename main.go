@@ -8,6 +8,8 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+
+	"github.com/pkg/errors"
 )
 
 var (
@@ -47,8 +49,7 @@ func parseJSON(filename string) error {
 	//	Open the provided file
 	jsonFile, err := os.Open(filename)
 	if err != nil {
-		return err
-		//return errors.Wrapf(err, "Failed to open \"%s\" , JSON parsing not performed", filename)
+		return errors.Wrapf(err, "Failed to open \"%s\"", filename)
 	}
 	infoLogger.Println("File opened successfully")
 
@@ -104,7 +105,6 @@ func initLogging() (*os.File, error) {
 }
 
 func main() {
-	// Manage closing of the file automatically once main returns
 	// TODO Add more robust error handling
 	file, err := initLogging()
 	if err != nil {
@@ -141,6 +141,7 @@ func main() {
 		err := parseJSON(*parseJSONPtr)
 		// TODO Add more robust error handling, Github-pkg-errors seems like a good candidate
 		if err != nil {
+			// Gives full traceback
 			errorLogger.Printf("%+v", err)
 			os.Exit(1)
 		}
