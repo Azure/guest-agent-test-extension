@@ -13,11 +13,14 @@ import (
 var (
 	version            = "1.0.0.0"
 	extensionShortName = "GATestExt"
+
 	// Logging is currently set up to create/add to the logile in the directory from where the binary is executed
+	// TODO Read this in from Handler Env
 	logfile = "guest-agent-test-extension.log"
 
-	infoLogger  *log.Logger
-	errorLogger *log.Logger
+	infoLogger    *log.Logger
+	warningLogger *log.Logger
+	errorLogger   *log.Logger
 )
 
 func install() {
@@ -44,8 +47,8 @@ func parseJSON(filename string) error {
 	//	Open the provided file
 	jsonFile, err := os.Open(filename)
 	if err != nil {
-		errorLogger.Println("File Not Found. JSON Parsing not performed.")
 		return err
+		//return errors.Wrapf(err, "Failed to open \"%s\" , JSON parsing not performed", filename)
 	}
 	infoLogger.Println("File opened successfully")
 
@@ -78,25 +81,24 @@ func parseJSON(filename string) error {
 *	The main difference between types of loggers is the label (eg INFO) and additional data provided .
  */
 func initLogging() (*os.File, error) {
-	// Open the file as read only
-	file, err := os.OpenFile(logfile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
+	file, err := os.OpenFile(logfile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		return nil, err
 	}
 
-	// Format the timestamp to match the UTC format from the waagent log files
-	// Sample out: INFO 2020-07-29 01:10:53.960425Z GATestExt version: 1.0.0.0 main.go:22: Hello World!
-	infoLogger = log.New(file, "INFO ", log.LUTC|log.Ldate|log.Ltime|log.Lmicroseconds|log.Lshortfile)
+	/* Log UTC Time, Date, Time, (w/ microseconds), line number, and make message prefix come right
+	before the message
+	*/
+	loggerFlags := log.LUTC | log.Ldate | log.Ltime | log.Lmicroseconds | log.Lshortfile | log.Lmsgprefix
 
-	// infoLogger.SetPrefix(time.Now().UTC().Format("2006-01-02T15:04:05.999999Z") + " " +
-	// 	extensionShortName + " " + version + " INFO ")
+	// Sample out: 2020/07/31 21:47:19.153535 main.go:145: Version: 1.0.0.0 INFO: Hello World!
+	infoLogger = log.New(io.MultiWriter(file, os.Stdout), "Version: "+version+" INFO: ", loggerFlags)
 
-	// Sample out: ERROR 2020-07-29 01:10:53.960425Z GATestExt version: 1.0.0.0 main.go:22: Hello World!
-	errorLogger = log.New(file, "ERROR ", log.LUTC|log.Ldate|log.Ltime|log.Lmicroseconds|log.Lshortfile)
+	// Sample out: 2020/07/31 21:47:19.153535 main.go:145: Version: 1.0.0.0 WARNING: Hello World!
+	warningLogger = log.New(io.MultiWriter(file, os.Stderr), "Version: "+version+" WARNING: ", loggerFlags)
 
-	// Configure error logging to std err as well
-	multi := io.MultiWriter(file, os.Stderr)
-	errorLogger.SetOutput(multi)
+	// Sample out: 2020/07/31 21:47:19.153535 main.go:145: Version: 1.0.0.0 ERROR: Hello World!
+	errorLogger = log.New(io.MultiWriter(file, os.Stderr), "Version: "+version+" ERROR: ", loggerFlags)
 
 	return file, nil
 }
@@ -128,15 +130,18 @@ func main() {
 		enable()
 	case "update":
 		update()
+	case "":
+		warningLogger.Println("No --command flag provided")
 	default:
-		errorLogger.Printf("Command \"%s\" not recognized", *commandStringPtr)
+		warningLogger.Printf("Command \"%s\" not recognized", *commandStringPtr)
 	}
 
 	// Parse the provided JSON file if there is one
 	if *parseJSONPtr != "" {
 		err := parseJSON(*parseJSONPtr)
-		// TODO Add more robust error handling
+		// TODO Add more robust error handling, Github-pkg-errors seems like a good candidate
 		if err != nil {
+			errorLogger.Printf("%+v", err)
 			os.Exit(1)
 		}
 	}

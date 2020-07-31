@@ -8,7 +8,6 @@ GOTEST=${GOCMD} test
 GORUN=${GOCMD} run 
 
 BINARY_NAME=bin/guest-agent-test-extension
-LOGFILE=guest-agent-test-extension.log
 WINDOWS_BIN=$(BINARY_NAME)_windows.exe
 LINUX_BIN=$(BINARY_NAME)_linux
 
@@ -44,7 +43,6 @@ deps:
 
 .PHONY: clean
 clean:
-	rm $(LOGFILE)
 	${GOCLEAN}
 	
 
