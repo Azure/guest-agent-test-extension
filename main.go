@@ -45,7 +45,6 @@ func update() {
 	infoLogger.Println("Updated Successfully.")
 }
 
-
 func parseJSON(filename string) error {
 	//	Open the provided file
 	jsonFile, err := os.Open(filename)
@@ -142,7 +141,19 @@ func main() {
 		err := parseJSON(*parseJSONPtr)
 		// TODO Add more robust error handling, Github-pkg-errors seems like a good candidate
 		if err != nil {
-			// Gives full traceback
+			// Gives full traceback: Sample:
+			/* 2020/07/31 22:28:54.962003 main.go:144: Version: 1.0.0.0 ERROR: open tet.json: The system cannot find the file specified.
+			Failed to open "tet.json"
+			main.parseJSON
+				C:/Users/t-etfali/Documents/GuestAgentExtension/guest-agent-test-extension/main.go:52
+			main.main
+				C:/Users/t-etfali/Documents/GuestAgentExtension/guest-agent-test-extension/main.go:141
+			runtime.main
+				c:/go/src/runtime/proc.go:203
+			runtime.goexit
+				c:/go/src/runtime/asm_amd64.s:1373
+			*/
+
 			errorLogger.Printf("%+v", err)
 			os.Exit(1)
 		}
