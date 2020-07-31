@@ -21,7 +21,6 @@ test:
 
 .PHONY: build_all
 build_all: build_windows build_linux
-	@echo version: $(VERSION)
 
 
 .PHONY: build_windows
@@ -38,7 +37,6 @@ build_linux: deps
 
 .PHONY: deps
 deps:
-	${GOGET} -u "github.com/go-kit/kit/log"
 	${GOGET} -u "github.com/Azure/azure-extension-foundation/sequence"
 	${GOGET} -u "github.com/Azure/azure-extension-foundation/settings"
 	${GOGET} -u "github.com/Azure/azure-extension-foundation/status"
@@ -46,6 +44,7 @@ deps:
 .PHONY: clean
 clean:
 	${GOCLEAN}
+	
 
 help:
 	@echo "TODO"

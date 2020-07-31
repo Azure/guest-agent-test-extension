@@ -2,61 +2,58 @@ package main
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
+	"io"
 	"io/ioutil"
+	"log"
 	"os"
-	"regexp"
 
-	"github.com/go-kit/kit/log"
+	"github.com/pkg/errors"
 )
 
 var (
-	version = "1.0.0.0"
+	version            = "1.0.0.0"
+	extensionShortName = "GATestExt"
+
+	// Logging is currently set up to create/add to the logile in the directory from where the binary is executed
+	// TODO Read this in from Handler Env
+	logfile = "guest-agent-test-extension.log"
+
+	infoLogger    *log.Logger
+	warningLogger *log.Logger
+	errorLogger   *log.Logger
 )
 
 func install() {
-	operation := "install"
-	msg := "Installed Successfully."
-
-	// Configuring logger to print time and verison by default
-	logger := log.NewLogfmtLogger(log.NewSyncWriter(os.Stdout))
-	logger = log.With(logger, "time", log.DefaultTimestamp, "version", version)
-
-	logger.Log("event", operation, "message", msg)
-
-	/*	Format: time=XX version=XX event=XX message=XX
-		Example: time=2020-XX-27T10:14:34.9357863-07:00 version=1.0.0.0 event=install message="Installed Successfully."
-	*/
+	infoLogger.Println("Installed Succesfully.")
 }
 
 func enable() {
-	fmt.Println("Enabled Successfully.")
+	infoLogger.Println("Enabled Successfully.")
 }
 
 func disable() {
-	fmt.Println("Disabled Successfully.")
+	infoLogger.Println("Disabled Successfully.")
 }
 
 func uninstall() {
-	fmt.Println("Uninstalled Successfully.")
+	infoLogger.Println("Uninstalled Successfully.")
 }
 
 func update() {
-	fmt.Println("Updated Successfully.")
+	infoLogger.Println("Updated Successfully.")
 }
 
-// Can be called with jsonfile=test (for example if you have a test.json file)
-// TODO: Make accepting "jsonfile=test.json" possible
-func parseJSON(jsonFilePath string) {
+func parseJSON(filename string) error {
 	//	Open the provided file
-	jsonFile, err := os.Open(jsonFilePath)
+	jsonFile, err := os.Open(filename)
 	if err != nil {
-		fmt.Println("File Not Found")
-		os.Exit(1)
+		return errors.Wrapf(err, "Failed to open \"%s\"", filename)
 	}
-	fmt.Println("File opened successfully")
+	infoLogger.Println("File opened successfully")
 
-	// Defer file closing until parseJSON() returns to its caller
+	// Defer file closing until parseJSON() returns
 	defer jsonFile.Close()
 
 	//	Unmarshall the bytes from the JSON file
@@ -75,47 +72,90 @@ func parseJSON(jsonFilePath string) {
 			reverseValue = string(val) + reverseValue
 		}
 
-		fmt.Println(key, reverseValue)
+		infoLogger.Println(key, reverseValue)
+	}
+	return nil
+}
+
+/* 	Open the logfile and configure the loggers that will be used
+*
+*	The main difference between types of loggers is the label (eg INFO) and additional data provided .
+ */
+func initLogging() (*os.File, error) {
+	file, err := os.OpenFile(logfile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return nil, err
 	}
 
+	/* Log UTC Time, Date, Time, (w/ microseconds), line number, and make message prefix come right
+	before the message
+	*/
+	loggerFlags := log.LUTC | log.Ldate | log.Ltime | log.Lmicroseconds | log.Lshortfile | log.Lmsgprefix
+
+	// Sample out: 2020/07/31 21:47:19.153535 main.go:145: Version: 1.0.0.0 INFO: Hello World!
+	infoLogger = log.New(io.MultiWriter(file, os.Stdout), "Version: "+version+" INFO: ", loggerFlags)
+
+	// Sample out: 2020/07/31 21:47:19.153535 main.go:145: Version: 1.0.0.0 WARNING: Hello World!
+	warningLogger = log.New(io.MultiWriter(file, os.Stderr), "Version: "+version+" WARNING: ", loggerFlags)
+
+	// Sample out: 2020/07/31 21:47:19.153535 main.go:145: Version: 1.0.0.0 ERROR: Hello World!
+	errorLogger = log.New(io.MultiWriter(file, os.Stderr), "Version: "+version+" ERROR: ", loggerFlags)
+
+	return file, nil
 }
 
 func main() {
-	if len(os.Args[1:]) > 0 {
-		for _, a := range os.Args[1:] {
-			/*	TODO : Not sure if there is a better method in regexp so don't need multiple vars
-			 */
-			matchDisable, _ := regexp.MatchString("^([-/]*)(disable)", a)
-			matchUninstall, _ := regexp.MatchString("^([-/]*)(uninstall)", a)
-			matchInstall, _ := regexp.MatchString("^([-/]*)(install)", a)
-			matchEnable, _ := regexp.MatchString("^([-/]*)(enable)", a)
-			matchUpdate, _ := regexp.MatchString("^([-/]*)(update)", a)
-
-			if matchDisable {
-				disable()
-			} else if matchUninstall {
-				uninstall()
-			} else if matchInstall {
-				install()
-			} else if matchEnable {
-				enable()
-			} else if matchUpdate {
-				update()
-			} else {
-				matchJSON, _ := regexp.MatchString("^([-/]*)(jsonfile=)", a)
-
-				// This is a workaround for when "." is included in the command line args, it separates the args
-				// TODO: implement this in a smarter way
-				if matchJSON {
-					s := a[10:] + ".json"
-					parseJSON(s)
-				}
-			}
-		}
-	} else {
-		fmt.Println("No command line arguments provided")
+	// TODO Add more robust error handling
+	file, err := initLogging()
+	if err != nil {
+		fmt.Println("Error opening the provided logfile.")
+		os.Exit(1)
 	}
-	/* 	TODO : Error handling might be necessary for if there is no match, but this could
-	just be a print statement else case if the regexp doesn't raise panics/errors
-	*/
+	defer file.Close()
+
+	// Command line flags that are currently supported
+	commandStringPtr := flag.String("command", "", "Valid commands are install, enable, update, disable and uninstall. Usage: --command=install")
+	parseJSONPtr := flag.String("jsonfile", "", "Path to the JSON file loction. Usage --jsonfile=\"test.json\"")
+
+	// Trigger parsing of the command flag and then run the corresponding command
+	flag.Parse()
+	switch *commandStringPtr {
+	case "disable":
+		disable()
+	case "uninstall":
+		uninstall()
+	case "install":
+		install()
+	case "enable":
+		enable()
+	case "update":
+		update()
+	case "":
+		warningLogger.Println("No --command flag provided")
+	default:
+		warningLogger.Printf("Command \"%s\" not recognized", *commandStringPtr)
+	}
+
+	// Parse the provided JSON file if there is one
+	if *parseJSONPtr != "" {
+		err := parseJSON(*parseJSONPtr)
+		// TODO Add more robust error handling, Github-pkg-errors seems like a good candidate
+		if err != nil {
+			// Gives full traceback: Sample:
+			/* 2020/07/31 22:28:54.962003 main.go:144: Version: 1.0.0.0 ERROR: open tet.json: The system cannot find the file specified.
+			Failed to open "tet.json"
+			main.parseJSON
+				C:/Users/t-etfali/Documents/GuestAgentExtension/guest-agent-test-extension/main.go:52
+			main.main
+				C:/Users/t-etfali/Documents/GuestAgentExtension/guest-agent-test-extension/main.go:141
+			runtime.main
+				c:/go/src/runtime/proc.go:203
+			runtime.goexit
+				c:/go/src/runtime/asm_amd64.s:1373
+			*/
+
+			errorLogger.Printf("%+v", err)
+			os.Exit(1)
+		}
+	}
 }

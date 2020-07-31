@@ -18,3 +18,5 @@ contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additio
 
 To run the program, you should use the make build_all command. This will create a "bin" directory and then put
 executables for all supported operating systems into the folder.
+
+For usage information, run the binary with the help flag ie (--h or --help)
