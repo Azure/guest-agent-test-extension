@@ -9,6 +9,9 @@ import (
 	"log"
 	"os"
 
+	"github.com/Azure/azure-extension-foundation/sequence"
+	"github.com/Azure/azure-extension-foundation/settings"
+	"github.com/Azure/azure-extension-foundation/status"
 	"github.com/pkg/errors"
 )
 
@@ -104,7 +107,61 @@ func initLogging() (*os.File, error) {
 	return file, nil
 }
 
+// extension specific PublicSettings
+type PublicSettings struct {
+	Script   string   `json:"script"`
+	FileURLs []string `json:"fileUris"`
+}
+
+// extension specific ProtectedSettings
+type ProtectedSettings struct {
+	SecretString       string   `json:"secretString"`
+	SecretScript       string   `json:"secretScript"`
+	FileURLs           []string `json:"fileUris"`
+	StorageAccountName string   `json:"storageAccountName"`
+	StorageAccountKey  string   `json:"storageAccountKey"`
+}
+
 func main() {
+	extensionMrseq, environmentMrseq, err := sequence.GetMostRecentSequenceNumber()
+	if err != nil {
+		fmt.Println(err.Error())
+		os.Exit(-1)
+	}
+
+	shouldRun := sequence.ShouldBeProcessed(extensionMrseq, environmentMrseq)
+	if !shouldRun {
+		fmt.Printf("environment mrseq has already been processed by extension (environment mrseq : %v, extension mrseq : %v)\n", environmentMrseq, extensionMrseq)
+		os.Exit(-1)
+	}
+
+	err = sequence.SetExtensionMostRecentSequenceNumber(environmentMrseq)
+	if err != nil {
+		fmt.Println(err.Error())
+		os.Exit(-1)
+	}
+
+	err = status.ReportTransitioning(environmentMrseq, "install", "installation in progress")
+	if err != nil {
+		fmt.Println(err.Error())
+		os.Exit(-1)
+	}
+
+	var publicSettings PublicSettings
+	var protectedSettings ProtectedSettings
+	err = settings.GetExtensionSettings(environmentMrseq, &publicSettings, &protectedSettings)
+	if err != nil {
+		status.ReportError(environmentMrseq, "install", err.Error())
+		fmt.Println(err.Error())
+		os.Exit(-1)
+	}
+
+	err = status.ReportSuccess(environmentMrseq, "install", "installation in complete")
+	if err != nil {
+		fmt.Println(err.Error())
+		os.Exit(-1)
+	}
+
 	// TODO Add more robust error handling
 	file, err := initLogging()
 	if err != nil {
