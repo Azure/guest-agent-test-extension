@@ -143,12 +143,14 @@ func main() {
 		errorLogger.Printf("%+v", err)
 		os.Exit(-1)
 	}
+	infoLogger.Printf("Extension MrSeq: %d, Environment MrSeq: %d", extensionMrseq, environmentMrseq)
 
 	shouldRun := sequence.ShouldBeProcessed(extensionMrseq, environmentMrseq)
 	if !shouldRun {
 		errorLogger.Printf("environment mrseq has already been processed by extension (environment mrseq : %v, extension mrseq : %v)\n", environmentMrseq, extensionMrseq)
 		os.Exit(-1)
 	}
+	infoLogger.Printf("Extension should run: %t", shouldRun)
 
 	err = sequence.SetExtensionMostRecentSequenceNumber(environmentMrseq)
 	if err != nil {
@@ -170,6 +172,7 @@ func main() {
 		errorLogger.Printf("%+v", err)
 		os.Exit(-1)
 	}
+	infoLogger.Printf("Public Settings: %v \t Protected Settings: %v", publicSettings, protectedSettings)
 
 	err = status.ReportSuccess(environmentMrseq, "install", "installation is complete")
 	if err != nil {
