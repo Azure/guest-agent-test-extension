@@ -21,7 +21,8 @@ var (
 
 	// Logging is currently set up to create/add to the logile in the directory from where the binary is executed
 	// TODO Read this in from Handler Env
-	logfile = "guest-agent-test-extension.log"
+	logfile        string
+	logfileLogName = "guest-agent-test-extension.log"
 
 	infoLogger    *log.Logger
 	warningLogger *log.Logger
@@ -85,9 +86,16 @@ func parseJSON(filename string) error {
 *	The main difference between types of loggers is the label (eg INFO) and additional data provided .
  */
 func initLogging() (*os.File, error) {
+	handlerEnv, err := settings.GetHandlerEnvironment()
+	if err != nil {
+		return nil, errors.Wrap(err, "Failed to open handler environment")
+	}
+
+	logfile = handlerEnv.HandlerEnvironment.LogFolder + "/" + logfileLogName
+
 	file, err := os.OpenFile(logfile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "Failed to create/open specified log file")
 	}
 
 	/* Log UTC Time, Date, Time, (w/ microseconds), line number, and make message prefix come right
@@ -123,27 +131,34 @@ type ProtectedSettings struct {
 }
 
 func main() {
+	file, err := initLogging()
+	if err != nil {
+		fmt.Println("Error opening the provided logfile.")
+		os.Exit(-1)
+	}
+	defer file.Close()
+
 	extensionMrseq, environmentMrseq, err := sequence.GetMostRecentSequenceNumber()
 	if err != nil {
-		fmt.Println(err.Error())
+		errorLogger.Printf("%+v", err)
 		os.Exit(-1)
 	}
 
 	shouldRun := sequence.ShouldBeProcessed(extensionMrseq, environmentMrseq)
 	if !shouldRun {
-		fmt.Printf("environment mrseq has already been processed by extension (environment mrseq : %v, extension mrseq : %v)\n", environmentMrseq, extensionMrseq)
+		errorLogger.Printf("environment mrseq has already been processed by extension (environment mrseq : %v, extension mrseq : %v)\n", environmentMrseq, extensionMrseq)
 		os.Exit(-1)
 	}
 
 	err = sequence.SetExtensionMostRecentSequenceNumber(environmentMrseq)
 	if err != nil {
-		fmt.Println(err.Error())
+		errorLogger.Printf("%+v", err)
 		os.Exit(-1)
 	}
 
 	err = status.ReportTransitioning(environmentMrseq, "install", "installation in progress")
 	if err != nil {
-		fmt.Println(err.Error())
+		errorLogger.Printf("%+v", err)
 		os.Exit(-1)
 	}
 
@@ -152,23 +167,15 @@ func main() {
 	err = settings.GetExtensionSettings(environmentMrseq, &publicSettings, &protectedSettings)
 	if err != nil {
 		status.ReportError(environmentMrseq, "install", err.Error())
-		fmt.Println(err.Error())
+		errorLogger.Printf("%+v", err)
 		os.Exit(-1)
 	}
 
-	err = status.ReportSuccess(environmentMrseq, "install", "installation in complete")
+	err = status.ReportSuccess(environmentMrseq, "install", "installation is complete")
 	if err != nil {
-		fmt.Println(err.Error())
+		errorLogger.Printf("%+v", err)
 		os.Exit(-1)
 	}
-
-	// TODO Add more robust error handling
-	file, err := initLogging()
-	if err != nil {
-		fmt.Println("Error opening the provided logfile.")
-		os.Exit(1)
-	}
-	defer file.Close()
 
 	// Command line flags that are currently supported
 	commandStringPtr := flag.String("command", "", "Valid commands are install, enable, update, disable and uninstall. Usage: --command=install")
@@ -212,7 +219,7 @@ func main() {
 			*/
 
 			errorLogger.Printf("%+v", err)
-			os.Exit(1)
+			os.Exit(-1)
 		}
 	}
 }
