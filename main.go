@@ -126,7 +126,6 @@ func initLogging() (*os.File, error) {
 	// Sample out: 2020/07/31 21:47:19.153535 main.go:145: Version: 1.0.0.0 ERROR: Hello World!
 	errorLogger = log.New(io.MultiWriter(file, os.Stderr), "Version: "+version+" ERROR: ", loggerFlags)
 
-	defer file.Close()
 	return file, nil
 }
 
@@ -148,9 +147,12 @@ type ProtectedSettings struct {
 func main() {
 	file, err := initLogging()
 	if err != nil {
-		fmt.Println("Error opening the provided logfile.")
+		fmt.Printf("Error opening the provided logfile. %+v", err)
 		os.Exit(logfileNotOpenedError)
 	}
+	//TODO: The file won't open if init logging throws an error, but file.close can also
+	//have errors related to disk writing delays. Will update with more robust error handling
+	//but for now this works well enough
 	defer file.Close()
 
 	extensionMrseq, environmentMrseq, err := sequence.GetMostRecentSequenceNumber()
