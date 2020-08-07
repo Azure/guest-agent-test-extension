@@ -8,7 +8,11 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"path"
 
+	"github.com/Azure/azure-extension-foundation/sequence"
+	"github.com/Azure/azure-extension-foundation/settings"
+	"github.com/Azure/azure-extension-foundation/status"
 	"github.com/pkg/errors"
 )
 
@@ -18,11 +22,25 @@ var (
 
 	// Logging is currently set up to create/add to the logile in the directory from where the binary is executed
 	// TODO Read this in from Handler Env
-	logfile = "guest-agent-test-extension.log"
+	logfile        string
+	logfileLogName = "guest-agent-test-extension.log"
 
 	infoLogger    *log.Logger
 	warningLogger *log.Logger
 	errorLogger   *log.Logger
+)
+
+const (
+	// Exit Codes
+	successfulExecution   = iota // 0
+	generalExitError             // 1
+	commandNotFoundError         // 2
+	logfileNotOpenedError        // 3
+	mrSeqNotFoundError           // 4
+	shouldNotRunError            // 5
+	seqNumberSetError            // 6
+	statusReportingError         // 7
+	settingsNotFoundError        // 8
 )
 
 func install() {
@@ -82,9 +100,16 @@ func parseJSON(filename string) error {
 *	The main difference between types of loggers is the label (eg INFO) and additional data provided .
  */
 func initLogging() (*os.File, error) {
+	handlerEnv, err := settings.GetHandlerEnvironment()
+	if err != nil {
+		return nil, errors.Wrap(err, "Failed to open handler environment")
+	}
+
+	logfile = path.Join(handlerEnv.HandlerEnvironment.LogFolder, logfileLogName)
+
 	file, err := os.OpenFile(logfile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "Failed to create/open %s", logfile)
 	}
 
 	/* Log UTC Time, Date, Time, (w/ microseconds), line number, and make message prefix come right
@@ -104,14 +129,73 @@ func initLogging() (*os.File, error) {
 	return file, nil
 }
 
+// extension specific PublicSettings
+type PublicSettings struct {
+	Script   string   `json:"script"`
+	FileURLs []string `json:"fileUris"`
+}
+
+// extension specific ProtectedSettings
+type ProtectedSettings struct {
+	SecretString       string   `json:"secretString"`
+	SecretScript       string   `json:"secretScript"`
+	FileURLs           []string `json:"fileUris"`
+	StorageAccountName string   `json:"storageAccountName"`
+	StorageAccountKey  string   `json:"storageAccountKey"`
+}
+
 func main() {
-	// TODO Add more robust error handling
 	file, err := initLogging()
 	if err != nil {
-		fmt.Println("Error opening the provided logfile.")
-		os.Exit(1)
+		fmt.Printf("Error opening the provided logfile. %+v", err)
+		os.Exit(logfileNotOpenedError)
 	}
+	//TODO: The file won't open if init logging throws an error, but file.close can also
+	//have errors related to disk writing delays. Will update with more robust error handling
+	//but for now this works well enough
 	defer file.Close()
+
+	extensionMrseq, environmentMrseq, err := sequence.GetMostRecentSequenceNumber()
+	if err != nil {
+		errorLogger.Printf("%+v", err)
+		os.Exit(mrSeqNotFoundError)
+	}
+	infoLogger.Printf("Extension MrSeq: %d, Environment MrSeq: %d", extensionMrseq, environmentMrseq)
+
+	shouldRun := sequence.ShouldBeProcessed(extensionMrseq, environmentMrseq)
+	if !shouldRun {
+		errorLogger.Printf("environment mrseq has already been processed by extension (environment mrseq : %v, extension mrseq : %v)\n", environmentMrseq, extensionMrseq)
+		os.Exit(shouldNotRunError)
+	}
+	infoLogger.Printf("Extension should run: %t", shouldRun)
+
+	err = sequence.SetExtensionMostRecentSequenceNumber(environmentMrseq)
+	if err != nil {
+		errorLogger.Printf("%+v", err)
+		os.Exit(seqNumberSetError)
+	}
+
+	err = status.ReportTransitioning(environmentMrseq, "install", "installation in progress")
+	if err != nil {
+		errorLogger.Printf("%+v", err)
+		os.Exit(statusReportingError)
+	}
+
+	var publicSettings PublicSettings
+	var protectedSettings ProtectedSettings
+	err = settings.GetExtensionSettings(environmentMrseq, &publicSettings, &protectedSettings)
+	if err != nil {
+		status.ReportError(environmentMrseq, "install", err.Error())
+		errorLogger.Printf("%+v", err)
+		os.Exit(settingsNotFoundError)
+	}
+	infoLogger.Printf("Public Settings: %v \t Protected Settings: %v", publicSettings, protectedSettings)
+
+	err = status.ReportSuccess(environmentMrseq, "install", "installation is complete")
+	if err != nil {
+		errorLogger.Printf("%+v", err)
+		os.Exit(statusReportingError)
+	}
 
 	// Command line flags that are currently supported
 	commandStringPtr := flag.String("command", "", "Valid commands are install, enable, update, disable and uninstall. Usage: --command=install")
@@ -134,6 +218,7 @@ func main() {
 		warningLogger.Println("No --command flag provided")
 	default:
 		warningLogger.Printf("Command \"%s\" not recognized", *commandStringPtr)
+		os.Exit(commandNotFoundError)
 	}
 
 	// Parse the provided JSON file if there is one
@@ -155,7 +240,8 @@ func main() {
 			*/
 
 			errorLogger.Printf("%+v", err)
-			os.Exit(1)
+			os.Exit(generalExitError)
 		}
 	}
+	os.Exit(successfulExecution)
 }
