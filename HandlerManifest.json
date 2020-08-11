@@ -1,0 +1,14 @@
+[{
+    "name": "GuestAgentTestExtension",
+    "version": 1.0,
+    "handlerManifest": {
+      "installCommand": "guest-agent-test-extension_linux --command=install",
+      "uninstallCommand": "guest-agent-test-extension_linux --command=uninstall",
+      "updateCommand": "guest-agent-test-extension_linux --command=update",
+      "enableCommand": "guest-agent-test-extension_linux --command=enable",
+      "disableCommand": "guest-agent-test-extension_linux --command=disable",
+      "updateMode": "UpdateWithoutInstall",
+      "rebootAfterInstall": false,
+      "reportHeartbeat": false
+    }
+  }]

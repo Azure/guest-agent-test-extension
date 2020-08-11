@@ -1,0 +1,19 @@
+<?xml version='1.0' encoding='utf-8'?>
+<ExtensionImage xmlns="http://schemas.microsoft.com/windowsazure">
+  <ProviderNameSpace>Microsoft.Azure.TestExtensions</ProviderNameSpace>
+  <Type>GuestAgentTestExtension</Type>
+  <Version>1.0.0</Version>
+  <Label>Microsoft Azure Guest Agent test extension</Label>
+  <HostingResources>VmRole</HostingResources>
+  <MediaLink></MediaLink>
+  <Description>Microsoft Azure Guest Agent test extension for testing virtual machines</Description>
+  <IsInternalExtension>true</IsInternalExtension>
+  <Eula>https://github.com/Azure/guest-agent-test-extension/blob/main/LICENSE</Eula>
+  <PrivacyUri>http://www.microsoft.com/privacystatement/en-us/OnlineServices/Default.aspx</PrivacyUri>
+  <HomepageUri>https://github.com/Azure/guest-agent-test-extension</HomepageUri>
+  <IsJsonExtension>true</IsJsonExtension>
+  <SupportedOS>Linux</SupportedOS>
+  <CompanyName>Microsoft</CompanyName>
+</ExtensionImage>
+
+
