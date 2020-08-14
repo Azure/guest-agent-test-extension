@@ -146,12 +146,6 @@ type ProtectedSettings struct {
 }
 
 func main() {
-	path, err := os.Getwd()
-	if err != nil {
-		fmt.Println(err)
-	}
-	fmt.Println(filepath.Base(path))
-
 	file, err := initLogging()
 	if err != nil {
 		fmt.Printf("Error opening the provided logfile. %+v", err)
@@ -161,6 +155,12 @@ func main() {
 	//have errors related to disk writing delays. Will update with more robust error handling
 	//but for now this works well enough
 	defer file.Close()
+
+	path, err := os.Getwd()
+	if err != nil {
+		fmt.Println(err)
+	}
+	infoLogger.Println(filepath.Base(path))
 
 	extensionMrseq, environmentMrseq, err := sequence.GetMostRecentSequenceNumber()
 	if err != nil {
