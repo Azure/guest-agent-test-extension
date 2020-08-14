@@ -10,6 +10,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 
 	"github.com/Azure/azure-extension-foundation/sequence"
 	"github.com/Azure/azure-extension-foundation/settings"
@@ -42,6 +43,7 @@ const (
 	seqNumberSetError            // 6
 	statusReportingError         // 7
 	settingsNotFoundError        // 8
+	versionMismatchError         // 9
 )
 
 func install() {
@@ -160,7 +162,12 @@ func main() {
 	if err != nil {
 		fmt.Println(err)
 	}
-	infoLogger.Println(filepath.Base(path))
+	s := strings.Split(filepath.Base(path), "-")
+	externalVersion := s[1]
+	if externalVersion != version {
+		errorLogger.Println("Version %s does not match directory version %s", version, externalVersion)
+		os.Exit()
+	}
 
 	extensionMrseq, environmentMrseq, err := sequence.GetMostRecentSequenceNumber()
 	if err != nil {
