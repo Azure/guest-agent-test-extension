@@ -9,6 +9,7 @@ import (
 	"log"
 	"os"
 	"path"
+	"path/filepath"
 
 	"github.com/Azure/azure-extension-foundation/sequence"
 	"github.com/Azure/azure-extension-foundation/settings"
@@ -149,7 +150,7 @@ func main() {
 	if err != nil {
 		fmt.Println(err)
 	}
-	fmt.Println(path)
+	fmt.Println(filepath.Base(path))
 
 	file, err := initLogging()
 	if err != nil {
