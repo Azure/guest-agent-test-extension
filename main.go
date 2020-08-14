@@ -166,7 +166,7 @@ func main() {
 	externalVersion := s[1]
 	if externalVersion != version {
 		errorLogger.Println("Version %s does not match directory version %s", version, externalVersion)
-		os.Exit()
+		os.Exit(versionMismatchError)
 	}
 
 	extensionMrseq, environmentMrseq, err := sequence.GetMostRecentSequenceNumber()
