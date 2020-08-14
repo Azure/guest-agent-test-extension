@@ -23,7 +23,7 @@ var (
 	// Logging is currently set up to create/add to the logile in the directory from where the binary is executed
 	// TODO Read this in from Handler Env
 	logfile        string
-	logfileLogName = "guest-agent-test-extension.log"
+	logfileLogName = "guest-agent-test-extension-" + version + ".log"
 
 	infoLogger    *log.Logger
 	warningLogger *log.Logger
@@ -145,6 +145,12 @@ type ProtectedSettings struct {
 }
 
 func main() {
+	path, err := os.Getwd()
+	if err != nil {
+		fmt.Println(err)
+	}
+	fmt.Println(path)
+
 	file, err := initLogging()
 	if err != nil {
 		fmt.Printf("Error opening the provided logfile. %+v", err)
