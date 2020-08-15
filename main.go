@@ -173,7 +173,7 @@ func main() {
 	versionArray := []string{versionMajor, versionMinor, versionBuild}
 
 	if !reflect.DeepEqual(externalVersion, versionArray) {
-		warningLogger.Printf("Version %s does not match directory version %s", version, externalVersion)
+		warningLogger.Printf("Version %s does not match directory version %s", versionArray, externalVersion)
 	}
 
 	extensionMrseq, environmentMrseq, err := sequence.GetMostRecentSequenceNumber()
