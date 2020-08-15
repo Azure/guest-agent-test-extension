@@ -21,7 +21,7 @@ import (
 var (
 	versionMajor       = "1"
 	versionMinor       = "0"
-	versionBuild       = "0"
+	versionBuild       = "1"
 	versionRevision    = "0"
 	version            = fmt.Sprintf("%s.%s.%s.%s", versionMajor, versionMinor, versionBuild, versionRevision)
 	extensionShortName = "GATestExt"
@@ -171,12 +171,12 @@ func main() {
 	externalVersion := strings.Split(strings.Split(filepath.Base(path), "-")[1], ".")
 	// If the revision is not present, add a 0 to the end
 	if len(externalVersion) < 4 {
-		externalVersion = append(externalVersion, ".0")
+		externalVersion = append(externalVersion, "0")
 	}
 	externalVersionString := strings.Join(externalVersion, ".")
 
 	if externalVersionString != version {
-		warningLogger.Printf("Version %s does not match directory version %s", version, externalVersionString)
+		warningLogger.Printf("Current version %s does not match directory version %s", version, externalVersionString)
 	}
 
 	extensionMrseq, environmentMrseq, err := sequence.GetMostRecentSequenceNumber()
