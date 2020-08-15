@@ -10,6 +10,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"reflect"
 	"strings"
 
 	"github.com/Azure/azure-extension-foundation/sequence"
@@ -19,7 +20,11 @@ import (
 )
 
 var (
-	version            = "1.0.0.0"
+	versionMajor       = "1"
+	versionMinor       = "0"
+	versionBuild       = "0"
+	versionRevision    = "0"
+	version            = fmt.Sprintf("%s.%s.%s.%s", versionMajor, versionMinor, versionBuild, versionRevision)
 	extensionShortName = "GATestExt"
 
 	// Logging is currently set up to create/add to the logile in the directory from where the binary is executed
@@ -162,11 +167,13 @@ func main() {
 	if err != nil {
 		fmt.Println(err)
 	}
-	s := strings.Split(filepath.Base(path), "-")
-	externalVersion := s[1]
-	if externalVersion != version {
-		errorLogger.Println("Version %s does not match directory version %s", version, externalVersion)
-		os.Exit(versionMismatchError)
+
+	//TODO name of the extension should probably need to be changed to <something>.GuestAgentTestExtension-<version>
+	externalVersion := strings.Split(strings.Split(filepath.Base(path), "-")[1], ".")
+	versionArray := []string{versionMajor, versionMinor, versionBuild}
+
+	if !reflect.DeepEqual(externalVersion, versionArray) {
+		warningLogger.Printf("Version %s does not match directory version %s", version, externalVersion)
 	}
 
 	extensionMrseq, environmentMrseq, err := sequence.GetMostRecentSequenceNumber()
