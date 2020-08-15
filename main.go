@@ -10,7 +10,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"reflect"
 	"strings"
 
 	"github.com/Azure/azure-extension-foundation/sequence"
@@ -170,10 +169,14 @@ func main() {
 
 	//TODO name of the extension should probably need to be changed to <something>.GuestAgentTestExtension-<version>
 	externalVersion := strings.Split(strings.Split(filepath.Base(path), "-")[1], ".")
-	versionArray := []string{versionMajor, versionMinor, versionBuild}
+	// If the revision is not present, add a 0 to the end
+	if len(externalVersion) < 4 {
+		externalVersion = append(externalVersion, ".0")
+	}
+	externalVersionString := strings.Join(externalVersion, ".")
 
-	if !reflect.DeepEqual(externalVersion, versionArray) {
-		warningLogger.Printf("Version %s does not match directory version %s", versionArray, externalVersion)
+	if externalVersionString != version {
+		warningLogger.Printf("Version %s does not match directory version %s", version, externalVersionString)
 	}
 
 	extensionMrseq, environmentMrseq, err := sequence.GetMostRecentSequenceNumber()
