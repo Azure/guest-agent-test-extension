@@ -69,19 +69,21 @@ type ProtectedSettings struct {
 
 func install() {
 	operation := "install"
+	infoLogger.Printf("Sequence number is %d", environmentMrSeq)
 
 	err := status.ReportTransitioning(environmentMrSeq, operation, "installation in progress")
 	if err != nil {
-		errorLogger.Printf("%+v", err)
+		errorLogger.Printf("Installation error: %+v", err)
 		os.Exit(statusReportingError)
 	}
+	infoLogger.Println("Installation in progress")
 
 	err = status.ReportSuccess(environmentMrSeq, operation, "installation is complete")
 	if err != nil {
 		errorLogger.Printf("%+v", err)
 		os.Exit(statusReportingError)
 	}
-
+	infoLogger.Println("Installation is complete")
 	os.Exit(successfulExecution)
 }
 
