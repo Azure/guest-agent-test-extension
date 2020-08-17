@@ -19,12 +19,14 @@ import (
 )
 
 var (
-	versionMajor       = "1"
-	versionMinor       = "0"
-	versionBuild       = "1"
-	versionRevision    = "0"
-	version            = fmt.Sprintf("%s.%s.%s.%s", versionMajor, versionMinor, versionBuild, versionRevision)
-	extensionShortName = "GATestExt"
+	versionMajor    = "1"
+	versionMinor    = "0"
+	versionBuild    = "1"
+	versionRevision = "0"
+	version         = fmt.Sprintf("%s.%s.%s.%s", versionMajor, versionMinor, versionBuild, versionRevision)
+
+	extensionMrSeq   int
+	environmentMrSeq int
 
 	// Logging is currently set up to create/add to the logile in the directory from where the binary is executed
 	// TODO Read this in from Handler Env
@@ -50,24 +52,120 @@ const (
 	versionMismatchError         // 9
 )
 
+// extension specific PublicSettings
+type PublicSettings struct {
+	Script   string   `json:"script"`
+	FileURLs []string `json:"fileUris"`
+}
+
+// extension specific ProtectedSettings
+type ProtectedSettings struct {
+	SecretString       string   `json:"secretString"`
+	SecretScript       string   `json:"secretScript"`
+	FileURLs           []string `json:"fileUris"`
+	StorageAccountName string   `json:"storageAccountName"`
+	StorageAccountKey  string   `json:"storageAccountKey"`
+}
+
 func install() {
-	infoLogger.Println("Installed Succesfully.")
+	operation := "install"
+
+	err := status.ReportTransitioning(environmentMrSeq, operation, "installation in progress")
+	if err != nil {
+		errorLogger.Printf("%+v", err)
+		os.Exit(statusReportingError)
+	}
+
+	err = status.ReportSuccess(environmentMrSeq, operation, "installation is complete")
+	if err != nil {
+		errorLogger.Printf("%+v", err)
+		os.Exit(statusReportingError)
+	}
+
+	os.Exit(successfulExecution)
 }
 
 func enable() {
-	infoLogger.Println("Enabled Successfully.")
+	operation := "enable"
+
+	err := status.ReportTransitioning(environmentMrSeq, operation, "enabling in progress")
+	if err != nil {
+		errorLogger.Printf("%+v", err)
+		os.Exit(statusReportingError)
+	}
+
+	var publicSettings PublicSettings
+	var protectedSettings ProtectedSettings
+
+	err = settings.GetExtensionSettings(environmentMrSeq, &publicSettings, &protectedSettings)
+	if err != nil {
+		status.ReportError(environmentMrSeq, operation, err.Error())
+		errorLogger.Printf("%+v", err)
+		os.Exit(settingsNotFoundError)
+	}
+	infoLogger.Printf("Public Settings: %v \t Protected Settings: %v", publicSettings, protectedSettings)
+
+	err = status.ReportSuccess(environmentMrSeq, operation, "enabling is complete")
+	if err != nil {
+		errorLogger.Printf("%+v", err)
+		os.Exit(statusReportingError)
+	}
+
+	os.Exit(successfulExecution)
 }
 
 func disable() {
-	infoLogger.Println("Disabled Successfully.")
+	operation := "disable"
+
+	err := status.ReportTransitioning(environmentMrSeq, operation, "disabling in progress")
+	if err != nil {
+		errorLogger.Printf("%+v", err)
+		os.Exit(statusReportingError)
+	}
+
+	err = status.ReportSuccess(environmentMrSeq, operation, "disabling is complete")
+	if err != nil {
+		errorLogger.Printf("%+v", err)
+		os.Exit(statusReportingError)
+	}
+
+	os.Exit(successfulExecution)
 }
 
 func uninstall() {
-	infoLogger.Println("Uninstalled Successfully.")
+	operation := "uninstall"
+
+	err := status.ReportTransitioning(environmentMrSeq, operation, "uninstallation in progress")
+	if err != nil {
+		errorLogger.Printf("%+v", err)
+		os.Exit(statusReportingError)
+	}
+
+	err = status.ReportSuccess(environmentMrSeq, operation, "uninstallation is complete")
+	if err != nil {
+		errorLogger.Printf("%+v", err)
+		os.Exit(statusReportingError)
+	}
+
+	os.Exit(successfulExecution)
 }
 
 func update() {
-	infoLogger.Println("Updated Successfully.")
+	operation := "update"
+
+	err := status.ReportTransitioning(environmentMrSeq, operation, "updating in progress")
+	if err != nil {
+		errorLogger.Printf("%+v", err)
+		os.Exit(statusReportingError)
+	}
+
+	err = status.ReportSuccess(environmentMrSeq, operation, "updating is complete")
+	if err != nil {
+		errorLogger.Printf("%+v", err)
+		os.Exit(statusReportingError)
+	}
+
+	os.Exit(successfulExecution)
 }
 
 func parseJSON(filename string) error {
@@ -107,6 +205,22 @@ func parseJSON(filename string) error {
 *	The main difference between types of loggers is the label (eg INFO) and additional data provided .
  */
 func initLogging() (*os.File, error) {
+	extensionPath, err := os.Getwd()
+	if err != nil {
+		fmt.Println(err)
+	}
+	externalVersion := strings.Split(strings.Split(filepath.Base(extensionPath), "-")[1], ".")
+	// If the revision number (4th digit) is not present, add a 0 to the end
+	if len(externalVersion) < 4 {
+		externalVersion = append(externalVersion, "0")
+	}
+	externalVersionString := strings.Join(externalVersion, ".")
+
+	if externalVersionString != version {
+		fmt.Printf("Current internal extension version %s does not match directory version %s using directory version of extension\n", version, externalVersionString)
+		version = externalVersionString
+	}
+
 	handlerEnv, err := settings.GetHandlerEnvironment()
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to open handler environment")
@@ -119,9 +233,7 @@ func initLogging() (*os.File, error) {
 		return nil, errors.Wrapf(err, "Failed to create/open %s", logfile)
 	}
 
-	/* Log UTC Time, Date, Time, (w/ microseconds), line number, and make message prefix come right
-	before the message
-	*/
+	// Log UTC Time, Date, Time, (w/ microseconds), line number, and move message prefix
 	loggerFlags := log.LUTC | log.Ldate | log.Ltime | log.Lmicroseconds | log.Lshortfile | log.Lmsgprefix
 
 	// Sample out: 2020/07/31 21:47:19.153535 main.go:145: Version: 1.0.0.0 INFO: Hello World!
@@ -136,21 +248,6 @@ func initLogging() (*os.File, error) {
 	return file, nil
 }
 
-// extension specific PublicSettings
-type PublicSettings struct {
-	Script   string   `json:"script"`
-	FileURLs []string `json:"fileUris"`
-}
-
-// extension specific ProtectedSettings
-type ProtectedSettings struct {
-	SecretString       string   `json:"secretString"`
-	SecretScript       string   `json:"secretScript"`
-	FileURLs           []string `json:"fileUris"`
-	StorageAccountName string   `json:"storageAccountName"`
-	StorageAccountKey  string   `json:"storageAccountKey"`
-}
-
 func main() {
 	file, err := initLogging()
 	if err != nil {
@@ -162,63 +259,24 @@ func main() {
 	//but for now this works well enough
 	defer file.Close()
 
-	path, err := os.Getwd()
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	//TODO name of the extension should probably need to be changed to <something>.GuestAgentTestExtension-<version>
-	externalVersion := strings.Split(strings.Split(filepath.Base(path), "-")[1], ".")
-	// If the revision is not present, add a 0 to the end
-	if len(externalVersion) < 4 {
-		externalVersion = append(externalVersion, "0")
-	}
-	externalVersionString := strings.Join(externalVersion, ".")
-
-	if externalVersionString != version {
-		warningLogger.Printf("Current version %s does not match directory version %s", version, externalVersionString)
-	}
-
-	extensionMrseq, environmentMrseq, err := sequence.GetMostRecentSequenceNumber()
+	extensionMrSeq, environmentMrSeq, err = sequence.GetMostRecentSequenceNumber()
 	if err != nil {
 		errorLogger.Printf("%+v", err)
 		os.Exit(mrSeqNotFoundError)
 	}
-	infoLogger.Printf("Extension MrSeq: %d, Environment MrSeq: %d", extensionMrseq, environmentMrseq)
+	infoLogger.Printf("Extension MrSeq: %d, Environment MrSeq: %d", extensionMrSeq, environmentMrSeq)
 
-	shouldRun := sequence.ShouldBeProcessed(extensionMrseq, environmentMrseq)
+	shouldRun := sequence.ShouldBeProcessed(extensionMrSeq, environmentMrSeq)
 	if !shouldRun {
-		errorLogger.Printf("environment mrseq has already been processed by extension (environment mrseq : %v, extension mrseq : %v)\n", environmentMrseq, extensionMrseq)
+		errorLogger.Printf("environment mrseq has already been processed by extension (environment mrseq : %v, extension mrseq : %v)\n", environmentMrSeq, extensionMrSeq)
 		os.Exit(shouldNotRunError)
 	}
 	infoLogger.Printf("Extension should run: %t", shouldRun)
 
-	err = sequence.SetExtensionMostRecentSequenceNumber(environmentMrseq)
+	err = sequence.SetExtensionMostRecentSequenceNumber(environmentMrSeq)
 	if err != nil {
 		errorLogger.Printf("%+v", err)
 		os.Exit(seqNumberSetError)
-	}
-
-	err = status.ReportTransitioning(environmentMrseq, "install", "installation in progress")
-	if err != nil {
-		errorLogger.Printf("%+v", err)
-		os.Exit(statusReportingError)
-	}
-
-	var publicSettings PublicSettings
-	var protectedSettings ProtectedSettings
-	err = settings.GetExtensionSettings(environmentMrseq, &publicSettings, &protectedSettings)
-	if err != nil {
-		status.ReportError(environmentMrseq, "install", err.Error())
-		errorLogger.Printf("%+v", err)
-		os.Exit(settingsNotFoundError)
-	}
-	infoLogger.Printf("Public Settings: %v \t Protected Settings: %v", publicSettings, protectedSettings)
-
-	err = status.ReportSuccess(environmentMrseq, "install", "installation is complete")
-	if err != nil {
-		errorLogger.Printf("%+v", err)
-		os.Exit(statusReportingError)
 	}
 
 	// Command line flags that are currently supported
@@ -244,11 +302,10 @@ func main() {
 		warningLogger.Printf("Command \"%s\" not recognized", *commandStringPtr)
 		os.Exit(commandNotFoundError)
 	}
-
+	//TODO this is being deprecated since it was proof of concept and the method will be repurposed
 	// Parse the provided JSON file if there is one
 	if *parseJSONPtr != "" {
 		err := parseJSON(*parseJSONPtr)
-		// TODO Add more robust error handling, Github-pkg-errors seems like a good candidate
 		if err != nil {
 			// Gives full traceback: Sample:
 			/* 2020/07/31 22:28:54.962003 main.go:144: Version: 1.0.0.0 ERROR: open tet.json: The system cannot find the file specified.
@@ -267,5 +324,4 @@ func main() {
 			os.Exit(generalExitError)
 		}
 	}
-	os.Exit(successfulExecution)
 }
