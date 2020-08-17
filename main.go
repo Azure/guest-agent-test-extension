@@ -12,7 +12,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/Azure/azure-extension-foundation/sequence"
 	"github.com/Azure/azure-extension-foundation/settings"
 	"github.com/Azure/azure-extension-foundation/status"
 	"github.com/pkg/errors"
@@ -36,6 +35,8 @@ var (
 	infoLogger    *log.Logger
 	warningLogger *log.Logger
 	errorLogger   *log.Logger
+
+	failCommands []string
 )
 
 const (
@@ -50,6 +51,7 @@ const (
 	statusReportingError         // 7
 	settingsNotFoundError        // 8
 	versionMismatchError         // 9
+	jsonParsingError             // 10
 )
 
 // extension specific PublicSettings
@@ -72,18 +74,26 @@ func install() {
 	infoLogger.Printf("Sequence number is %d", environmentMrSeq)
 
 	err := status.ReportTransitioning(environmentMrSeq, operation, "installation in progress")
+	infoLogger.Println("Installation in progress")
 	if err != nil {
 		errorLogger.Printf("Installation error: %+v", err)
 		os.Exit(statusReportingError)
 	}
-	infoLogger.Println("Installation in progress")
+
+	fmt.Println(failCommands)
+	for _, value := range failCommands {
+		if value == operation {
+			errorLogger.Printf("%s failed based on provided failCommand", operation)
+			panic(fmt.Sprintf("%s failed based on provided failCommand", operation))
+		}
+	}
 
 	err = status.ReportSuccess(environmentMrSeq, operation, "installation is complete")
+	infoLogger.Println("Installation is complete")
 	if err != nil {
-		errorLogger.Printf("%+v", err)
+		errorLogger.Printf("Status reporting error error: %+v", err)
 		os.Exit(statusReportingError)
 	}
-	infoLogger.Println("Installation is complete")
 	os.Exit(successfulExecution)
 }
 
@@ -91,6 +101,7 @@ func enable() {
 	operation := "enable"
 
 	err := status.ReportTransitioning(environmentMrSeq, operation, "enabling in progress")
+	infoLogger.Println("enabling in progress")
 	if err != nil {
 		errorLogger.Printf("%+v", err)
 		os.Exit(statusReportingError)
@@ -108,6 +119,7 @@ func enable() {
 	infoLogger.Printf("Public Settings: %v \t Protected Settings: %v", publicSettings, protectedSettings)
 
 	err = status.ReportSuccess(environmentMrSeq, operation, "enabling is complete")
+	infoLogger.Println("enabling is complete")
 	if err != nil {
 		errorLogger.Printf("%+v", err)
 		os.Exit(statusReportingError)
@@ -120,12 +132,14 @@ func disable() {
 	operation := "disable"
 
 	err := status.ReportTransitioning(environmentMrSeq, operation, "disabling in progress")
+	infoLogger.Println("disabling in progress")
 	if err != nil {
 		errorLogger.Printf("%+v", err)
 		os.Exit(statusReportingError)
 	}
 
 	err = status.ReportSuccess(environmentMrSeq, operation, "disabling is complete")
+	infoLogger.Println("disabling is complete")
 	if err != nil {
 		errorLogger.Printf("%+v", err)
 		os.Exit(statusReportingError)
@@ -138,12 +152,14 @@ func uninstall() {
 	operation := "uninstall"
 
 	err := status.ReportTransitioning(environmentMrSeq, operation, "uninstallation in progress")
+	infoLogger.Println("uninstallation in progress")
 	if err != nil {
 		errorLogger.Printf("%+v", err)
 		os.Exit(statusReportingError)
 	}
 
 	err = status.ReportSuccess(environmentMrSeq, operation, "uninstallation is complete")
+	infoLogger.Println("uninstallation is complete")
 	if err != nil {
 		errorLogger.Printf("%+v", err)
 		os.Exit(statusReportingError)
@@ -156,12 +172,14 @@ func update() {
 	operation := "update"
 
 	err := status.ReportTransitioning(environmentMrSeq, operation, "updating in progress")
+	infoLogger.Println("updating in progress")
 	if err != nil {
 		errorLogger.Printf("%+v", err)
 		os.Exit(statusReportingError)
 	}
 
 	err = status.ReportSuccess(environmentMrSeq, operation, "updating is complete")
+	infoLogger.Println("updating is complete")
 	if err != nil {
 		errorLogger.Printf("%+v", err)
 		os.Exit(statusReportingError)
@@ -182,23 +200,12 @@ func parseJSON(filename string) error {
 	defer jsonFile.Close()
 
 	//	Unmarshall the bytes from the JSON file
-	// 	TODO: If we know the exact format, we can read the JSON into a struct which might be cleaner
 	byteValue, _ := ioutil.ReadAll(jsonFile)
-	var result map[string]interface{}
-	json.Unmarshal([]byte(byteValue), &result)
+	var jsonData map[string][]string
+	json.Unmarshal([]byte(byteValue), &jsonData)
 
-	// Get the map with the name "keys"
-	keys := result["keys"].(map[string]interface{})
+	failCommands = jsonData["failCommands"]
 
-	//	Parse each key value and reverse the string by appending characters backwards
-	for key, value := range keys {
-		reverseValue := ""
-		for _, val := range value.(string) {
-			reverseValue = string(val) + reverseValue
-		}
-
-		infoLogger.Println(key, reverseValue)
-	}
 	return nil
 }
 
@@ -261,25 +268,25 @@ func main() {
 	//but for now this works well enough
 	defer file.Close()
 
-	extensionMrSeq, environmentMrSeq, err = sequence.GetMostRecentSequenceNumber()
-	if err != nil {
-		errorLogger.Printf("%+v", err)
-		os.Exit(mrSeqNotFoundError)
-	}
-	infoLogger.Printf("Extension MrSeq: %d, Environment MrSeq: %d", extensionMrSeq, environmentMrSeq)
+	// extensionMrSeq, environmentMrSeq, err = sequence.GetMostRecentSequenceNumber()
+	// if err != nil {
+	// 	errorLogger.Printf("%+v", err)
+	// 	os.Exit(mrSeqNotFoundError)
+	// }
+	// infoLogger.Printf("Extension MrSeq: %d, Environment MrSeq: %d", extensionMrSeq, environmentMrSeq)
 
-	shouldRun := sequence.ShouldBeProcessed(extensionMrSeq, environmentMrSeq)
-	if !shouldRun {
-		errorLogger.Printf("environment mrseq has already been processed by extension (environment mrseq : %v, extension mrseq : %v)\n", environmentMrSeq, extensionMrSeq)
-		os.Exit(shouldNotRunError)
-	}
-	infoLogger.Printf("Extension should run: %t", shouldRun)
+	// shouldRun := sequence.ShouldBeProcessed(extensionMrSeq, environmentMrSeq)
+	// if !shouldRun {
+	// 	errorLogger.Printf("environment mrseq has already been processed by extension (environment mrseq : %v, extension mrseq : %v)\n", environmentMrSeq, extensionMrSeq)
+	// 	os.Exit(shouldNotRunError)
+	// }
+	// infoLogger.Printf("Extension should run: %t", shouldRun)
 
-	err = sequence.SetExtensionMostRecentSequenceNumber(environmentMrSeq)
-	if err != nil {
-		errorLogger.Printf("%+v", err)
-		os.Exit(seqNumberSetError)
-	}
+	// err = sequence.SetExtensionMostRecentSequenceNumber(environmentMrSeq)
+	// if err != nil {
+	// 	errorLogger.Printf("%+v", err)
+	// 	os.Exit(seqNumberSetError)
+	// }
 
 	// Command line flags that are currently supported
 	commandStringPtr := flag.String("command", "", "Valid commands are install, enable, update, disable and uninstall. Usage: --command=install")
@@ -287,6 +294,26 @@ func main() {
 
 	// Trigger parsing of the command flag and then run the corresponding command
 	flag.Parse()
+
+	err = parseJSON(*parseJSONPtr)
+	if err != nil {
+		// Gives full traceback: Sample:
+		/* 2020/07/31 22:28:54.962003 main.go:144: Version: 1.0.0.0 ERROR: open tet.json: The system cannot find the file specified.
+		Failed to open "tet.json"
+		main.parseJSON
+			C:/Users/t-etfali/Documents/GuestAgentExtension/guest-agent-test-extension/main.go:52
+		main.main
+			C:/Users/t-etfali/Documents/GuestAgentExtension/guest-agent-test-extension/main.go:141
+		runtime.main
+			c:/go/src/runtime/proc.go:203
+		runtime.goexit
+			c:/go/src/runtime/asm_amd64.s:1373
+		*/
+
+		errorLogger.Printf("Error parsing provided JSON file: %+v", err)
+		os.Exit(jsonParsingError)
+	}
+
 	switch *commandStringPtr {
 	case "disable":
 		disable()
@@ -300,30 +327,9 @@ func main() {
 		update()
 	case "":
 		warningLogger.Println("No --command flag provided")
+		os.Exit(commandNotFoundError)
 	default:
 		warningLogger.Printf("Command \"%s\" not recognized", *commandStringPtr)
 		os.Exit(commandNotFoundError)
-	}
-	//TODO this is being deprecated since it was proof of concept and the method will be repurposed
-	// Parse the provided JSON file if there is one
-	if *parseJSONPtr != "" {
-		err := parseJSON(*parseJSONPtr)
-		if err != nil {
-			// Gives full traceback: Sample:
-			/* 2020/07/31 22:28:54.962003 main.go:144: Version: 1.0.0.0 ERROR: open tet.json: The system cannot find the file specified.
-			Failed to open "tet.json"
-			main.parseJSON
-				C:/Users/t-etfali/Documents/GuestAgentExtension/guest-agent-test-extension/main.go:52
-			main.main
-				C:/Users/t-etfali/Documents/GuestAgentExtension/guest-agent-test-extension/main.go:141
-			runtime.main
-				c:/go/src/runtime/proc.go:203
-			runtime.goexit
-				c:/go/src/runtime/asm_amd64.s:1373
-			*/
-
-			errorLogger.Printf("%+v", err)
-			os.Exit(generalExitError)
-		}
 	}
 }
