@@ -25,9 +25,9 @@ var (
 	logfile        string
 	logfileLogName = "guest-agent-test-extension.log"
 
-	infoLogger    *customInfoLogger
-	warningLogger *log.Logger
-	errorLogger   *log.Logger
+	infoLogger    customInfoLogger
+	warningLogger customWarningLogger
+	errorLogger   customErrorLogger
 )
 
 const (
@@ -112,14 +112,9 @@ func initLogging() (*os.File, error) {
 		return nil, errors.Wrapf(err, "Failed to create/open %s", logfile)
 	}
 
-	// Sample out: 2020/07/31 21:47:19.153535 main.go:145: Version: 1.0.0.0 INFO: Hello World!
 	infoLogger.infoLogger = log.New(io.MultiWriter(file, os.Stdout), "", 0)
-
-	// Sample out: 2020/07/31 21:47:19.153535 main.go:145: Version: 1.0.0.0 WARNING: Hello World!
-	warningLogger = log.New(io.MultiWriter(file, os.Stderr), "", 0)
-
-	// Sample out: 2020/07/31 21:47:19.153535 main.go:145: Version: 1.0.0.0 ERROR: Hello World!
-	errorLogger = log.New(io.MultiWriter(file, os.Stderr), "", 0)
+	warningLogger.warningLogger = log.New(io.MultiWriter(file, os.Stderr), "", 0)
+	errorLogger.errorLogger = log.New(io.MultiWriter(file, os.Stderr), "", 0)
 
 	return file, nil
 }

@@ -1,5 +1,3 @@
-SHELL := /bin/bash
-
 GOCMD=go
 GOBUILD=${GOCMD} build
 GOCLEAN=${GOCMD} clean
@@ -26,12 +24,12 @@ build_all: build_windows build_linux
 .PHONY: build_windows
 build_windows: deps
 	$(GOCMD) env GOOS=windows 
-	${GOBUILD} -o ${WINDOWS_BIN} ./main -v
+	${GOBUILD} -o ${WINDOWS_BIN} ./main/
 
 .PHONY: build_linux
 build_linux: deps
 	$(GOCMD) env GOOS=linux
-	${GOBUILD} -o ${LINUX_BIN} ./main -v
+	${GOBUILD} -o  ${LINUX_BIN} ./main/
 
 
 
