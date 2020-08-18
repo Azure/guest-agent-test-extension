@@ -115,6 +115,10 @@ func initLogging() (*os.File, error) {
 	warningLogger.logger = log.New(io.MultiWriter(file, os.Stderr), "", 0)
 	errorLogger.logger = log.New(io.MultiWriter(file, os.Stderr), "", 0)
 
+	infoLogger.initLogger("INFO")
+	warningLogger.initLogger("WARNING")
+	errorLogger.initLogger("ERROR")
+
 	return file, nil
 }
 
@@ -143,10 +147,6 @@ func main() {
 	//have errors related to disk writing delays. Will update with more robust error handling
 	//but for now this works well enough
 	defer file.Close()
-
-	infoLogger.initLogger("INFO")
-	warningLogger.initLogger("WARNING")
-	errorLogger.initLogger("ERROR")
 
 	extensionMrseq, environmentMrseq, err := sequence.GetMostRecentSequenceNumber()
 	if err != nil {
