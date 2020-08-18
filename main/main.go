@@ -25,9 +25,7 @@ var (
 	logfile        string
 	logfileLogName = "guest-agent-test-extension.log"
 
-	infoLogger    customInfoLogger
-	warningLogger customWarningLogger
-	errorLogger   customErrorLogger
+	infoLogger, warningLogger, errorLogger customLogger
 )
 
 const (
@@ -113,9 +111,9 @@ func initLogging() (*os.File, error) {
 	}
 
 	//Sample: [2020-08-18T20:29:16.079902Z] [1.0.0.0] [main.go:148] [INFO]: Test1
-	infoLogger.infoLogger = log.New(io.MultiWriter(file, os.Stdout), "", 0)
-	warningLogger.warningLogger = log.New(io.MultiWriter(file, os.Stderr), "", 0)
-	errorLogger.errorLogger = log.New(io.MultiWriter(file, os.Stderr), "", 0)
+	infoLogger.logger = log.New(io.MultiWriter(file, os.Stdout), "", 0)
+	warningLogger.logger = log.New(io.MultiWriter(file, os.Stderr), "", 0)
+	errorLogger.logger = log.New(io.MultiWriter(file, os.Stderr), "", 0)
 
 	return file, nil
 }
@@ -145,6 +143,10 @@ func main() {
 	//have errors related to disk writing delays. Will update with more robust error handling
 	//but for now this works well enough
 	defer file.Close()
+
+	infoLogger.initLogger("INFO")
+	warningLogger.initLogger("WARNING")
+	errorLogger.initLogger("ERROR")
 
 	extensionMrseq, environmentMrseq, err := sequence.GetMostRecentSequenceNumber()
 	if err != nil {
