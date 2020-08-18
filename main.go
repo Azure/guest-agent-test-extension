@@ -29,12 +29,14 @@ var (
 
 	// Logging is currently set up to create/add to the logile in the directory from where the binary is executed
 	// TODO Read this in from Handler Env
-	logfile        string
-	logfileLogName = "GuestAgentTestExtension-" + version + ".log"
+	extensionName    = "GuestAgentTestExtension"
+	logfile          string
+	operationLogfile string
 
-	infoLogger    *log.Logger
-	warningLogger *log.Logger
-	errorLogger   *log.Logger
+	infoLogger      *log.Logger
+	warningLogger   *log.Logger
+	errorLogger     *log.Logger
+	operationLogger *log.Logger
 
 	failCommands []string
 )
@@ -213,7 +215,7 @@ func parseJSON(filename string) error {
 *
 *	The main difference between types of loggers is the label (eg INFO) and additional data provided .
  */
-func initLogging() (*os.File, error) {
+func initGeneralLogging() (*os.File, error) {
 	extensionPath, err := os.Getwd()
 	if err != nil {
 		fmt.Println(err)
@@ -235,6 +237,40 @@ func initLogging() (*os.File, error) {
 		return nil, errors.Wrap(err, "Failed to open handler environment")
 	}
 
+	logfileLogName := extensionName + "-" + version + ".log"
+	logfile = path.Join(handlerEnv.HandlerEnvironment.LogFolder, logfileLogName)
+
+	file, err := os.OpenFile(logfile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return nil, errors.Wrapf(err, "Failed to create/open %s", logfile)
+	}
+
+	// Log UTC Time, Date, Time, (w/ microseconds), line number, and move message prefix
+	// TODO REMOVE THIS LMSG PREFIX FLAG
+	loggerFlags := log.LUTC | log.Ldate | log.Ltime | log.Lmicroseconds | log.Lshortfile | log.Lmsgprefix
+
+	// Sample out: 2020/07/31 21:47:19.153535 main.go:145: Version: 1.0.0.0 INFO: Hello World!
+	infoLogger = log.New(io.MultiWriter(file, os.Stdout), "Version: "+version+" INFO: ", loggerFlags)
+
+	// Sample out: 2020/07/31 21:47:19.153535 main.go:145: Version: 1.0.0.0 WARNING: Hello World!
+	warningLogger = log.New(io.MultiWriter(file, os.Stderr), "Version: "+version+" WARNING: ", loggerFlags)
+
+	// Sample out: 2020/07/31 21:47:19.153535 main.go:145: Version: 1.0.0.0 ERROR: Hello World!
+	errorLogger = log.New(io.MultiWriter(file, os.Stderr), "Version: "+version+" ERROR: ", loggerFlags)
+
+	return file, nil
+}
+
+/*
+	General logging should be called first since this function does not check versioning
+*/
+func initOperationLogging() (*os.File, error) {
+	handlerEnv, err := settings.GetHandlerEnvironment()
+	if err != nil {
+		return nil, errors.Wrap(err, "Failed to open handler environment")
+	}
+
+	logfileLogName := extensionName + "-" + version + ".log"
 	logfile = path.Join(handlerEnv.HandlerEnvironment.LogFolder, logfileLogName)
 
 	file, err := os.OpenFile(logfile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
@@ -258,7 +294,7 @@ func initLogging() (*os.File, error) {
 }
 
 func main() {
-	file, err := initLogging()
+	file, err := initGeneralLogging()
 	if err != nil {
 		fmt.Printf("Error opening the provided logfile. %+v", err)
 		os.Exit(logfileNotOpenedError)
