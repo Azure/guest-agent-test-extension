@@ -112,6 +112,7 @@ func initLogging() (*os.File, error) {
 		return nil, errors.Wrapf(err, "Failed to create/open %s", logfile)
 	}
 
+	//Sample: [2020-08-18T20:29:16.079902Z] [1.0.0.0] [main.go:148] [INFO]: Test1
 	infoLogger.infoLogger = log.New(io.MultiWriter(file, os.Stdout), "", 0)
 	warningLogger.warningLogger = log.New(io.MultiWriter(file, os.Stderr), "", 0)
 	errorLogger.errorLogger = log.New(io.MultiWriter(file, os.Stderr), "", 0)
