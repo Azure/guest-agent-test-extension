@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/Azure/azure-extension-foundation/sequence"
 	"github.com/Azure/azure-extension-foundation/settings"
 	"github.com/Azure/azure-extension-foundation/status"
 	"github.com/pkg/errors"
@@ -73,12 +74,12 @@ type ProtectedSettings struct {
 
 func install() {
 	operation := "install"
-	infoLogger.Printf("Sequence number is %d", environmentMrSeq)
+	infoLogger.Printf("Extension MrSeq: %d, Environment MrSeq: %d", extensionMrSeq, environmentMrSeq)
 
 	err := status.ReportTransitioning(environmentMrSeq, operation, "installation in progress")
 	infoLogger.Println("Installation in progress")
 	if err != nil {
-		errorLogger.Printf("Installation error: %+v", err)
+		errorLogger.Printf("Installation status reporting error: %+v", err)
 		os.Exit(statusReportingError)
 	}
 
@@ -215,7 +216,7 @@ func parseJSON(filename string) error {
 *
 *	The main difference between types of loggers is the label (eg INFO) and additional data provided .
  */
-func initGeneralLogging() (*os.File, error) {
+func initLogging() (*os.File, error) {
 	extensionPath, err := os.Getwd()
 	if err != nil {
 		fmt.Println(err)
@@ -228,8 +229,7 @@ func initGeneralLogging() (*os.File, error) {
 	externalVersionString := strings.Join(externalVersion, ".")
 
 	if externalVersionString != version {
-		fmt.Printf("Current internal extension version %s does not match directory version %s using directory version of extension\n", version, externalVersionString)
-		version = externalVersionString
+		fmt.Printf("Current internal extension version %s does not match directory version %s using internal version of extension\n", version, externalVersionString)
 	}
 
 	handlerEnv, err := settings.GetHandlerEnvironment()
@@ -294,7 +294,7 @@ func initOperationLogging() (*os.File, error) {
 }
 
 func main() {
-	file, err := initGeneralLogging()
+	file, err := initLogging()
 	if err != nil {
 		fmt.Printf("Error opening the provided logfile. %+v", err)
 		os.Exit(logfileNotOpenedError)
@@ -304,25 +304,13 @@ func main() {
 	//but for now this works well enough
 	defer file.Close()
 
-	// extensionMrSeq, environmentMrSeq, err = sequence.GetMostRecentSequenceNumber()
-	// if err != nil {
-	// 	errorLogger.Printf("%+v", err)
-	// 	os.Exit(mrSeqNotFoundError)
-	// }
-	// infoLogger.Printf("Extension MrSeq: %d, Environment MrSeq: %d", extensionMrSeq, environmentMrSeq)
-
-	// shouldRun := sequence.ShouldBeProcessed(extensionMrSeq, environmentMrSeq)
-	// if !shouldRun {
-	// 	errorLogger.Printf("environment mrseq has already been processed by extension (environment mrseq : %v, extension mrseq : %v)\n", environmentMrSeq, extensionMrSeq)
-	// 	os.Exit(shouldNotRunError)
-	// }
-	// infoLogger.Printf("Extension should run: %t", shouldRun)
-
-	// err = sequence.SetExtensionMostRecentSequenceNumber(environmentMrSeq)
-	// if err != nil {
-	// 	errorLogger.Printf("%+v", err)
-	// 	os.Exit(seqNumberSetError)
-	// }
+	extensionMrSeq, environmentMrSeq, err = sequence.GetMostRecentSequenceNumber()
+	if err != nil {
+		errorLogger.Printf("Error getting sequence number %+v", err)
+		extensionMrSeq = -1
+		environmentMrSeq = -1
+	}
+	infoLogger.Printf("Extension MrSeq: %d, Environment MrSeq: %d", extensionMrSeq, environmentMrSeq)
 
 	// Command line flags that are currently supported
 	commandStringPtr := flag.String("command", "", "Valid commands are install, enable, update, disable and uninstall. Usage: --command=install")
