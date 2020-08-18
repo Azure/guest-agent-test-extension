@@ -26,12 +26,12 @@ build_all: build_windows build_linux
 .PHONY: build_windows
 build_windows: deps
 	$(GOCMD) env GOOS=windows 
-	${GOBUILD} -o ${WINDOWS_BIN} -v
+	${GOBUILD} -o ${WINDOWS_BIN} ./main -v
 
 .PHONY: build_linux
 build_linux: deps
 	$(GOCMD) env GOOS=linux
-	${GOBUILD} -o ${LINUX_BIN} -v
+	${GOBUILD} -o ${LINUX_BIN} ./main -v
 
 
 
