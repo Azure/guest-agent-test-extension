@@ -9,6 +9,7 @@ import (
 	"log"
 	"os"
 	"path"
+	"strings"
 
 	"github.com/Azure/azure-extension-foundation/sequence"
 	"github.com/Azure/azure-extension-foundation/settings"
@@ -255,12 +256,6 @@ func initLogging() (*os.File, error) {
 	warningLogger = customLogger{log.New(io.MultiWriter(file, os.Stderr), "", 0), warningOperation}
 	errorLogger = customLogger{log.New(io.MultiWriter(file, os.Stderr), "", 0), errorOperation}
 
-	envExtensionVersion := os.Getenv("AZURE_GUEST_AGENT_EXTENSION_VERSION")
-	if envExtensionVersion != "" && envExtensionVersion != version {
-		warningLogger.Printf("Internal version %s does not match with environment variable version %s",
-			version, envExtensionVersion)
-	}
-
 	return file, nil
 }
 
@@ -274,6 +269,18 @@ func main() {
 	//have errors related to disk writing delays. Will update with more robust error handling
 	//but for now this works well enough
 	defer file.Close()
+
+	envExtensionVersion := os.Getenv("AZURE_GUEST_AGENT_EXTENSION_VERSION")
+	if envExtensionVersion != "" && envExtensionVersion != version {
+		warningLogger.Printf("Internal version %s does not match with environment variable version %s",
+			version, envExtensionVersion)
+	}
+
+	//Testing Printing environment variables
+	for _, e := range os.Environ() {
+		pair := strings.SplitN(e, "=", 2)
+		infoLogger.Println(pair[0])
+	}
 
 	extensionMrSeq, environmentMrSeq, err = sequence.GetMostRecentSequenceNumber()
 	if err != nil {
