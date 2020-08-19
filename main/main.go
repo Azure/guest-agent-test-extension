@@ -111,13 +111,9 @@ func initLogging() (*os.File, error) {
 	}
 
 	//Sample: [2020-08-18T20:29:16.079902Z] [1.0.0.0] [main.go:148] [INFO]: Test1
-	infoLogger.logger = log.New(io.MultiWriter(file, os.Stdout), "", 0)
-	warningLogger.logger = log.New(io.MultiWriter(file, os.Stderr), "", 0)
-	errorLogger.logger = log.New(io.MultiWriter(file, os.Stderr), "", 0)
-
-	infoLogger.initLogger("INFO")
-	warningLogger.initLogger("WARNING")
-	errorLogger.initLogger("ERROR")
+	infoLogger = customLogger{log.New(io.MultiWriter(file, os.Stdout), "", 0), infoOperation}
+	warningLogger = customLogger{log.New(io.MultiWriter(file, os.Stderr), "", 0), warningOperation}
+	errorLogger = customLogger{log.New(io.MultiWriter(file, os.Stderr), "", 0), errorOperation}
 
 	return file, nil
 }
