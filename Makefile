@@ -5,7 +5,7 @@ GOGET=${GOCMD} get
 GOTEST=${GOCMD} test
 GORUN=${GOCMD} run 
 
-BINARY_NAME=bin/guest-agent-test-extension
+BINARY_NAME=bin/GuestAgentTestExtension
 WINDOWS_BIN=$(BINARY_NAME)_windows.exe
 LINUX_BIN=$(BINARY_NAME)_linux
 
@@ -20,18 +20,24 @@ test:
 .PHONY: build_all
 build_all: build_windows build_linux
 
-
 .PHONY: build_windows
-build_windows: deps
+build_windows:
 	$(GOCMD) env GOOS=windows 
 	${GOBUILD} -o ${WINDOWS_BIN} ./main/
 
 .PHONY: build_linux
-build_linux: deps
+build_linux:
 	$(GOCMD) env GOOS=linux
 	${GOBUILD} -o  ${LINUX_BIN} ./main/
 
+.PHONY: build_all_with_deps
+build_all_with_deps: deps build_all
 
+.PHONY: build_linux_with_deps
+build_linux_with_deps: deps build_linux
+
+.PHONY: build_windows_with_deps
+build_windows_with_deps: deps build_windows
 
 .PHONY: deps
 deps:

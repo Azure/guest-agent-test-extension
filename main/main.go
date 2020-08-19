@@ -23,7 +23,7 @@ var (
 	// Logging is currently set up to create/add to the logile in the directory from where the binary is executed
 	// TODO Read this in from Handler Env
 	logfile        string
-	logfileLogName = "guest-agent-test-extension.log"
+	logfileLogName = "GuestAgentTestExtension.log"
 
 	infoLogger, warningLogger, errorLogger customLogger
 )
