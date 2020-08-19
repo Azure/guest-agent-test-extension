@@ -238,13 +238,17 @@ func parseJSON(filename string) error {
 *	The main difference between types of loggers is the label (eg INFO) and additional data provided .
  */
 func initLogging() (*os.File, error) {
-	handlerEnv, err := settings.GetHandlerEnvironment()
-	if err != nil {
-		return nil, errors.Wrap(err, "Failed to open handler environment")
-	}
+	handlerEnv, handlerEnvErr := settings.GetHandlerEnvironment()
 
 	logfileLogName := extensionName + "-" + version + ".log"
-	logfile = path.Join(handlerEnv.HandlerEnvironment.LogFolder, logfileLogName)
+	if handlerEnvErr != nil {
+		logfile = logfileLogName
+	} else {
+		if _, err := os.Stat(handlerEnv.HandlerEnvironment.LogFolder); os.IsNotExist(err) {
+			os.Mkdir(handlerEnv.HandlerEnvironment.LogFolder, os.ModeDir)
+		}
+		logfile = path.Join(handlerEnv.HandlerEnvironment.LogFolder, logfileLogName)
+	}
 
 	file, err := os.OpenFile(logfile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
@@ -256,6 +260,9 @@ func initLogging() (*os.File, error) {
 	warningLogger = customLogger{log.New(io.MultiWriter(file, os.Stderr), "", 0), warningOperation}
 	errorLogger = customLogger{log.New(io.MultiWriter(file, os.Stderr), "", 0), errorOperation}
 
+	if handlerEnvErr != nil {
+		errorLogger.Printf("Error opening handler environment %+v", handlerEnvErr)
+	}
 	return file, nil
 }
 
