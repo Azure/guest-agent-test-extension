@@ -53,6 +53,21 @@ const (
 	jsonParsingError             // 10
 )
 
+// extension specific PublicSettings
+type PublicSettings struct {
+	Script   string   `json:"script"`
+	FileURLs []string `json:"fileUris"`
+}
+
+// extension specific ProtectedSettings
+type ProtectedSettings struct {
+	SecretString       string   `json:"secretString"`
+	SecretScript       string   `json:"secretScript"`
+	FileURLs           []string `json:"fileUris"`
+	StorageAccountName string   `json:"storageAccountName"`
+	StorageAccountKey  string   `json:"storageAccountKey"`
+}
+
 func install() {
 	operation := "install"
 	infoLogger.Printf("Extension MrSeq: %d, Environment MrSeq: %d", extensionMrSeq, environmentMrSeq)
@@ -214,7 +229,6 @@ func parseJSON(filename string) error {
 	json.Unmarshal([]byte(byteValue), &jsonData)
 
 	failCommands = jsonData["failCommands"]
-
 	return nil
 }
 
@@ -227,7 +241,7 @@ func initLogging() (*os.File, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to open handler environment")
 	}
-
+	logfileLogname := extensionName + "-" + version
 	logfile = path.Join(handlerEnv.HandlerEnvironment.LogFolder, logfileLogName)
 
 	file, err := os.OpenFile(logfile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
