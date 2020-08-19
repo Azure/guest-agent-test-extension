@@ -20,7 +20,7 @@ var (
 	versionMajor    = "1"
 	versionMinor    = "0"
 	versionBuild    = "0"
-	versionRevision = "0"
+	versionRevision = "2"
 	version         = fmt.Sprintf("%s.%s.%s.%s", versionMajor, versionMinor, versionBuild, versionRevision)
 
 	extensionMrSeq   int
@@ -257,7 +257,7 @@ func initLogging() (*os.File, error) {
 
 	envExtensionVersion := os.Getenv("AZURE_GUEST_AGENT_EXTENSION_VERSION")
 	if envExtensionVersion != "" && envExtensionVersion != version {
-		fmt.Printf("Internal version %s does not match with environment variable version %s",
+		warningLogger.Printf("Internal version %s does not match with environment variable version %s",
 			version, envExtensionVersion)
 	}
 
