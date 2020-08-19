@@ -241,7 +241,7 @@ func initLogging() (*os.File, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to open handler environment")
 	}
-	logfileLogname := extensionName + "-" + version
+	logfileLogName := extensionName + "-" + version
 	logfile = path.Join(handlerEnv.HandlerEnvironment.LogFolder, logfileLogName)
 
 	file, err := os.OpenFile(logfile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
