@@ -19,10 +19,6 @@ type customLogger struct {
 	operation string
 }
 
-func (l *customLogger) initLogger(loggerType string) {
-	l.operation = loggerType
-}
-
 func (l *customLogger) Print(v ...interface{}) {
 	l.logger.Print(formatMessage(l.operation, fmt.Sprint(v...)))
 }
