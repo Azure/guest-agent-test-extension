@@ -241,6 +241,7 @@ func initLogging() (*os.File, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to open handler environment")
 	}
+
 	logfileLogName := extensionName + "-" + version + ".log"
 	logfile = path.Join(handlerEnv.HandlerEnvironment.LogFolder, logfileLogName)
 
@@ -253,6 +254,12 @@ func initLogging() (*os.File, error) {
 	infoLogger = customLogger{log.New(io.MultiWriter(file, os.Stdout), "", 0), infoOperation}
 	warningLogger = customLogger{log.New(io.MultiWriter(file, os.Stderr), "", 0), warningOperation}
 	errorLogger = customLogger{log.New(io.MultiWriter(file, os.Stderr), "", 0), errorOperation}
+
+	envExtensionVersion := os.Getenv("AZURE_GUEST_AGENT_EXTENSION_VERSION")
+	if envExtensionVersion != "" && envExtensionVersion != version {
+		fmt.Printf("Internal version %s does not match with environment variable version %s",
+			version, envExtensionVersion)
+	}
 
 	return file, nil
 }
