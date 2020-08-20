@@ -94,7 +94,7 @@ func initGeneralLogging() (*os.File, error) {
 
 	file, err := os.OpenFile(generalLogfile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
-		return nil, errors.Wrapf(err, "Failed to create/open %s", logfile)
+		return nil, errors.Wrapf(err, "Failed to create/open %s", generalLogfile)
 	}
 
 	//Sample: [2020-08-18T20:29:16.079902Z] [1.0.0.0] [main.go:148] [INFO]: Test1
@@ -111,7 +111,7 @@ func initGeneralLogging() (*os.File, error) {
 func initOperationLogging() (*os.File, error) {
 	handlerEnv, handlerEnvErr := settings.GetHandlerEnvironment()
 
-	operationLogfileLogName := "operation-" + version + ".log"
+	operationLogfileLogName := "operations-" + version + ".log"
 	if handlerEnvErr != nil {
 		operationLogfile = operationLogfileLogName
 	} else {
@@ -127,7 +127,7 @@ func initOperationLogging() (*os.File, error) {
 	}
 
 	//Sample: [2020-08-18T20:29:16.079902Z] [1.0.0.0] [main.go:148] [INFO]: Test1
-	operationLogger = customOperationLogger{log.New(io.MultiWriter(file, os.Stdout), "", 0)}
+	operationLogger = customOperationLogger{log.New(file, "", 0)}
 
 	if handlerEnvErr != nil {
 		errorLogger.Printf("Error opening handler environment %+v", handlerEnvErr)

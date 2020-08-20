@@ -67,6 +67,7 @@ type ProtectedSettings struct {
 func install() {
 	operation := "install"
 	infoLogger.Printf("Extension MrSeq: %d, Environment MrSeq: %d", extensionMrSeq, environmentMrSeq)
+	operationLogger.Printf("[Seq Num: %d] [operation: %s]", environmentMrSeq, operation)
 
 	err := status.ReportTransitioning(environmentMrSeq, operation, "installation in progress")
 	infoLogger.Println("Installation in progress")
@@ -86,6 +87,8 @@ func install() {
 
 func enable() {
 	operation := "enable"
+	infoLogger.Printf("Extension MrSeq: %d, Environment MrSeq: %d", extensionMrSeq, environmentMrSeq)
+	operationLogger.Printf("[Seq Num: %d] [operation: %s]", environmentMrSeq, operation)
 
 	err := status.ReportTransitioning(environmentMrSeq, operation, "enabling in progress")
 	infoLogger.Println("enabling in progress")
@@ -116,6 +119,8 @@ func enable() {
 
 func disable() {
 	operation := "disable"
+	infoLogger.Printf("Extension MrSeq: %d, Environment MrSeq: %d", extensionMrSeq, environmentMrSeq)
+	operationLogger.Printf("[Seq Num: %d] [operation: %s]", environmentMrSeq, operation)
 
 	err := status.ReportTransitioning(environmentMrSeq, operation, "disabling in progress")
 	infoLogger.Println("disabling in progress")
@@ -135,6 +140,8 @@ func disable() {
 
 func uninstall() {
 	operation := "uninstall"
+	infoLogger.Printf("Extension MrSeq: %d, Environment MrSeq: %d", extensionMrSeq, environmentMrSeq)
+	operationLogger.Printf("[Seq Num: %d] [operation: %s]", environmentMrSeq, operation)
 
 	err := status.ReportTransitioning(environmentMrSeq, operation, "uninstallation in progress")
 	infoLogger.Println("uninstallation in progress")
@@ -154,6 +161,8 @@ func uninstall() {
 
 func update() {
 	operation := "update"
+	infoLogger.Printf("Extension MrSeq: %d, Environment MrSeq: %d", extensionMrSeq, environmentMrSeq)
+	operationLogger.Printf("[Seq Num: %d] [operation: %s]", environmentMrSeq, operation)
 
 	err := status.ReportTransitioning(environmentMrSeq, operation, "updating in progress")
 	infoLogger.Println("updating in progress")
@@ -231,7 +240,6 @@ func main() {
 	err = parseJSON(*parseJSONPtr)
 	if err != nil {
 		errorLogger.Printf("Error parsing provided JSON file: %+v", err)
-		os.Exit(jsonParsingError)
 	}
 
 	switch *commandStringPtr {
