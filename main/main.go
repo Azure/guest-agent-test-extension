@@ -50,13 +50,12 @@ const (
 )
 
 // extension specific PublicSettings
-type PublicSettings struct {
-	Script   string   `json:"script"`
-	FileURLs []string `json:"fileUris"`
+type extensionPublicSettings struct {
+	Name string `json:"name"`
 }
 
 // extension specific ProtectedSettings
-type ProtectedSettings struct {
+type extensionPrivateSettings struct {
 	SecretString       string   `json:"secretString"`
 	SecretScript       string   `json:"secretScript"`
 	FileURLs           []string `json:"fileUris"`
@@ -97,8 +96,8 @@ func enable() {
 		os.Exit(statusReportingError)
 	}
 
-	var publicSettings PublicSettings
-	var protectedSettings ProtectedSettings
+	var publicSettings extensionPublicSettings
+	var protectedSettings extensionPrivateSettings
 
 	err = settings.GetExtensionSettings(environmentMrSeq, &publicSettings, &protectedSettings)
 	if err != nil {
@@ -107,6 +106,8 @@ func enable() {
 		os.Exit(settingsNotFoundError)
 	}
 	infoLogger.Printf("Public Settings: %v \t Protected Settings: %v", publicSettings, protectedSettings)
+
+	infoLogger.Printf("Provided Name is: %s", publicSettings.Name)
 
 	err = status.ReportSuccess(environmentMrSeq, operation, "enabling is complete")
 	if err != nil {
