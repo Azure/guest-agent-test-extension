@@ -20,7 +20,6 @@ test:
 .PHONY: build_all
 build_all: build_windows build_linux
 
-
 .PHONY: build_windows
 build_windows:
 	$(GOCMD) env GOOS=windows 
@@ -30,6 +29,15 @@ build_windows:
 build_linux:
 	$(GOCMD) env GOOS=linux
 	${GOBUILD} -o  ${LINUX_BIN} ./main/
+
+.PHONY: build_all_with_deps
+build_all_with_deps: deps build_all
+
+.PHONY: build_linux_with_deps
+build_linux_with_deps: deps build_linux
+
+.PHONY: build_windows_with_deps
+build_windows_with_deps: deps build_windows
 
 .PHONY: deps
 deps:
