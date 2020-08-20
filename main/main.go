@@ -4,12 +4,8 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io"
 	"io/ioutil"
-	"log"
 	"os"
-	"path"
-	"strings"
 
 	"github.com/Azure/azure-extension-foundation/sequence"
 	"github.com/Azure/azure-extension-foundation/settings"
@@ -29,12 +25,13 @@ var (
 
 	// Logging is currently set up to create/add to the logile in the directory from where the binary is executed
 	// TODO Read this in from Handler Env
-	logfile          string
+	generalLogfile   string
 	operationLogfile string
 
 	extensionName = "GuestAgentTestExtension"
 
-	infoLogger, warningLogger, errorLogger customLogger
+	infoLogger, warningLogger, errorLogger customGeneralLogger
+	operationLogger                        customOperationLogger
 
 	failCommands []string
 )
@@ -233,49 +230,21 @@ func parseJSON(filename string) error {
 	return nil
 }
 
-/* 	Open the logfile and configure the loggers that will be used
-*
-*	The main difference between types of loggers is the label (eg INFO) and additional data provided .
- */
-func initLogging() (*os.File, error) {
-	handlerEnv, handlerEnvErr := settings.GetHandlerEnvironment()
-
-	logfileLogName := extensionName + "-" + version + ".log"
-	if handlerEnvErr != nil {
-		logfile = logfileLogName
-	} else {
-		if _, err := os.Stat(handlerEnv.HandlerEnvironment.LogFolder); os.IsNotExist(err) {
-			os.Mkdir(handlerEnv.HandlerEnvironment.LogFolder, os.ModeDir)
-		}
-		logfile = path.Join(handlerEnv.HandlerEnvironment.LogFolder, logfileLogName)
-	}
-
-	file, err := os.OpenFile(logfile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		return nil, errors.Wrapf(err, "Failed to create/open %s", logfile)
-	}
-
-	//Sample: [2020-08-18T20:29:16.079902Z] [1.0.0.0] [main.go:148] [INFO]: Test1
-	infoLogger = customLogger{log.New(io.MultiWriter(file, os.Stdout), "", 0), infoOperation}
-	warningLogger = customLogger{log.New(io.MultiWriter(file, os.Stderr), "", 0), warningOperation}
-	errorLogger = customLogger{log.New(io.MultiWriter(file, os.Stderr), "", 0), errorOperation}
-
-	if handlerEnvErr != nil {
-		errorLogger.Printf("Error opening handler environment %+v", handlerEnvErr)
-	}
-	return file, nil
-}
-
 func main() {
-	file, err := initLogging()
-	if err != nil {
-		fmt.Printf("Error opening the provided logfile. %+v", err)
+	generalFile, operationFile, generalErr, operationErr := initAllLogging()
+	if generalErr != nil {
+		fmt.Printf("Error opening general logfile %+v", generalErr)
 		os.Exit(logfileNotOpenedError)
 	}
+	defer generalFile.Close()
+	if operationErr != nil {
+		fmt.Printf("Error opening operations logfile %+v", operationErr)
+		os.Exit(logfileNotOpenedError)
+	}
+	defer operationFile.Close()
 	//TODO: The file won't open if init logging throws an error, but file.close can also
 	//have errors related to disk writing delays. Will update with more robust error handling
 	//but for now this works well enough
-	defer file.Close()
 
 	envExtensionVersion := os.Getenv("AZURE_GUEST_AGENT_EXTENSION_VERSION")
 	if envExtensionVersion != "" && envExtensionVersion != version {
@@ -283,13 +252,7 @@ func main() {
 			version, envExtensionVersion)
 	}
 
-	//Testing Printing environment variables
-	for _, e := range os.Environ() {
-		pair := strings.SplitN(e, "=", 2)
-		infoLogger.Println(pair[0])
-	}
-
-	extensionMrSeq, environmentMrSeq, err = sequence.GetMostRecentSequenceNumber()
+	extensionMrSeq, environmentMrSeq, err := sequence.GetMostRecentSequenceNumber()
 	if err != nil {
 		warningLogger.Printf("Error getting sequence number %+v", err)
 		extensionMrSeq = -1
