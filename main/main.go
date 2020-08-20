@@ -32,8 +32,6 @@ var (
 
 	infoLogger, warningLogger, errorLogger customGeneralLogger
 	operationLogger                        customOperationLogger
-
-	failCommands []string
 )
 
 const (
@@ -77,13 +75,6 @@ func install() {
 		os.Exit(statusReportingError)
 	}
 
-	for _, value := range failCommands {
-		if value == operation {
-			errorLogger.Printf("%s failed based on provided failCommand", operation)
-			panic(fmt.Sprintf("%s failed based on provided failCommand", operation))
-		}
-	}
-
 	err = status.ReportSuccess(environmentMrSeq, operation, "installation is complete")
 	if err != nil {
 		errorLogger.Printf("Status reporting error: %+v", err)
@@ -101,13 +92,6 @@ func enable() {
 	if err != nil {
 		errorLogger.Printf("%+v", err)
 		os.Exit(statusReportingError)
-	}
-
-	for _, value := range failCommands {
-		if value == operation {
-			errorLogger.Printf("%s failed based on provided failCommand", operation)
-			panic(fmt.Sprintf("%s failed based on provided failCommand", operation))
-		}
 	}
 
 	var publicSettings PublicSettings
@@ -140,13 +124,6 @@ func disable() {
 		os.Exit(statusReportingError)
 	}
 
-	for _, value := range failCommands {
-		if value == operation {
-			errorLogger.Printf("%s failed based on provided failCommand", operation)
-			panic(fmt.Sprintf("%s failed based on provided failCommand", operation))
-		}
-	}
-
 	err = status.ReportSuccess(environmentMrSeq, operation, "disabling is complete")
 	if err != nil {
 		errorLogger.Printf("%+v", err)
@@ -166,15 +143,7 @@ func uninstall() {
 		os.Exit(statusReportingError)
 	}
 
-	for _, value := range failCommands {
-		if value == operation {
-			errorLogger.Printf("%s failed based on provided failCommand", operation)
-			panic(fmt.Sprintf("%s failed based on provided failCommand", operation))
-		}
-	}
-
 	err = status.ReportSuccess(environmentMrSeq, operation, "uninstallation is complete")
-
 	if err != nil {
 		errorLogger.Printf("%+v", err)
 		os.Exit(statusReportingError)
@@ -193,15 +162,7 @@ func update() {
 		os.Exit(statusReportingError)
 	}
 
-	for _, value := range failCommands {
-		if value == operation {
-			errorLogger.Printf("%s failed based on provided failCommand", operation)
-			panic(fmt.Sprintf("%s failed based on provided failCommand", operation))
-		}
-	}
-
 	err = status.ReportSuccess(environmentMrSeq, operation, "updating is complete")
-
 	if err != nil {
 		errorLogger.Printf("%+v", err)
 		os.Exit(statusReportingError)
@@ -226,7 +187,7 @@ func parseJSON(filename string) error {
 	var jsonData map[string][]string
 	json.Unmarshal([]byte(byteValue), &jsonData)
 
-	failCommands = jsonData["failCommands"]
+	fmt.Print(jsonData["failCommands"])
 	return nil
 }
 
