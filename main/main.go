@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strconv"
 
 	"github.com/Azure/azure-extension-foundation/sequence"
 	"github.com/Azure/azure-extension-foundation/settings"
@@ -32,6 +33,9 @@ var (
 
 	infoLogger, warningLogger, errorLogger customGeneralLogger
 	operationLogger                        customOperationLogger
+
+	extensionConfiguration extensionConfigurationStruct
+	failCommands           []failCommandsStruct
 )
 
 const (
@@ -73,6 +77,26 @@ func install() {
 	if err != nil {
 		errorLogger.Printf("Status reporting error: %+v", err)
 		os.Exit(statusReportingError)
+	}
+
+	for _, failCommand := range failCommands {
+		if failCommand.Command == operation {
+			errorLogger.Printf("%s failed with message: %s exitCode: %s", failCommand.Command, failCommand.ErrorMessage, failCommand.ExitCode)
+
+			err := status.ReportError(environmentMrSeq, failCommand.Command, failCommand.ErrorMessage)
+			if err != nil {
+				errorLogger.Printf("Status reporting error: %+v", err)
+				os.Exit(statusReportingError)
+			}
+
+			if exitCode, err := strconv.Atoi(failCommand.ExitCode); err == nil {
+				os.Exit(exitCode)
+			} else {
+				errorLogger.Printf("Unable to use provided exit code %+v", err)
+				os.Exit(generalExitError)
+			}
+
+		}
 	}
 
 	err = status.ReportSuccess(environmentMrSeq, operation, "installation is complete")
@@ -181,6 +205,16 @@ func update() {
 	os.Exit(successfulExecution)
 }
 
+type extensionConfigurationStruct struct {
+	FailCommands []failCommandsStruct `json:"failCommands"`
+}
+
+type failCommandsStruct struct {
+	Command      string `json:"command"`
+	ErrorMessage string `json:"errorMessage"`
+	ExitCode     string `json:"exitCode"`
+}
+
 func parseJSON(filename string) error {
 	//	Open the provided file
 	jsonFile, err := os.Open(filename)
@@ -194,10 +228,11 @@ func parseJSON(filename string) error {
 
 	//	Unmarshall the bytes from the JSON file
 	byteValue, _ := ioutil.ReadAll(jsonFile)
-	var jsonData map[string][]string
-	json.Unmarshal([]byte(byteValue), &jsonData)
 
-	fmt.Print(jsonData["failCommands"])
+	json.Unmarshal([]byte(byteValue), &extensionConfiguration)
+
+	failCommands = extensionConfiguration.FailCommands
+
 	return nil
 }
 

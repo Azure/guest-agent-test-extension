@@ -1,3 +1,14 @@
 {
-    "failCommands": ["enable"]
+    "failCommands": [
+        {
+            "command" : "install",
+            "errorMessage" : "install failure due to specification in failCommand",
+            "exitCode" : "9"
+        },
+        {
+            "command" : "enable",
+            "errorMessage" : "enable failure due to specification in failCommand",
+            "exitCode" : "10"
+        }
+    ]
 }
