@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strings"
 
 	"github.com/Azure/azure-extension-foundation/sequence"
 	"github.com/Azure/azure-extension-foundation/settings"
@@ -93,6 +94,35 @@ func testCommand(operation string) {
 	reportStatus("success", operation, fmt.Sprintf("%s completed successfully", operation))
 }
 
+func parseJSON(filename string) error {
+	//	Open the provided file
+	jsonFile, err := os.Open(filename)
+	if err != nil {
+		return errors.Wrapf(err, "Failed to open \"%s\"", filename)
+	}
+	infoLogger.Println("JSON File opened successfully")
+
+	// Defer file closing until parseJSON() returns
+	defer jsonFile.Close()
+
+	//	Unmarshall the bytes from the JSON file
+	byteValue, _ := ioutil.ReadAll(jsonFile)
+	var jsonData map[string][]string
+	json.Unmarshal([]byte(byteValue), &jsonData)
+
+	return nil
+}
+
+func reportExecutionStatus() {
+	if executionErrors == nil {
+		os.Exit(successfulExecution)
+	} else {
+		errorMessage := strings.Join(executionErrors, "\n")
+		errorLogger.Println(errorMessage)
+		os.Exit(generalExitError)
+	}
+}
+
 func install() {
 	operation := "install"
 	testCommand(operation)
@@ -132,26 +162,6 @@ func uninstall() {
 func update() {
 	operation := "update"
 	testCommand(operation)
-}
-
-func parseJSON(filename string) error {
-	//	Open the provided file
-	jsonFile, err := os.Open(filename)
-	if err != nil {
-		return errors.Wrapf(err, "Failed to open \"%s\"", filename)
-	}
-	infoLogger.Println("File opened successfully")
-
-	// Defer file closing until parseJSON() returns
-	defer jsonFile.Close()
-
-	//	Unmarshall the bytes from the JSON file
-	byteValue, _ := ioutil.ReadAll(jsonFile)
-	var jsonData map[string][]string
-	json.Unmarshal([]byte(byteValue), &jsonData)
-
-	fmt.Print(jsonData["failCommands"])
-	return nil
 }
 
 func main() {
@@ -210,5 +220,4 @@ func main() {
 		warningLogger.Printf("Command \"%s\" not recognized", *commandStringPtr)
 		os.Exit(commandNotFoundError)
 	}
-	os.Exit(successfulExecution)
 }
