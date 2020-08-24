@@ -3,3 +3,6 @@ bin/*
 
 # Ignore the log file
 *.log
+
+# Ignore the testing config json
+test.json

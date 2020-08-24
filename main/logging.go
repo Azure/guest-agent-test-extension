@@ -20,69 +20,68 @@ var (
 	errorOperation   = "ERROR"
 )
 
-type customGeneralLogger struct {
+type customLogger struct {
 	logger    *log.Logger
 	operation string
 }
 
-func (l *customGeneralLogger) Print(v ...interface{}) {
-	l.logger.Print(formatLoggingMessage(l.operation, fmt.Sprint(v...)))
-}
-
-func (l *customGeneralLogger) Println(v ...interface{}) {
-	l.logger.Println(formatLoggingMessage(l.operation, fmt.Sprint(v...)))
-}
-
-func (l *customGeneralLogger) Printf(format string, v ...interface{}) {
-	l.logger.Printf(formatLoggingMessage(l.operation, fmt.Sprintf(format, v...)))
-}
-
-func formatLoggingMessage(messageType string, message string) string {
-	currentTime := time.Now().UTC().Format("2006-01-02T15:04:05.999Z")
-
-	//Caller(1) is the customlogger Print function in this file
-	//Caller(2) is the line that called the logger's print function
-	_, filePath, line, _ := runtime.Caller(2)
-
-	//Gets the line number and caller of the log message to identify what line logged
-	shortFileArr := strings.Split(filePath, "/")
-	shortFile := shortFileArr[len(shortFileArr)-1]
-
-	return fmt.Sprintf("[%s] [%s] [%s:%d] [%s]: %s", currentTime, version, shortFile, line, messageType, message)
+type customGeneralLogger struct {
+	customLogger
 }
 
 type customOperationLogger struct {
-	logger *log.Logger
+	customLogger
 }
 
+func (l *customGeneralLogger) Print(v ...interface{}) {
+	l.logger.Print(formatLoggingMessage(*l, l.operation, fmt.Sprint(v...)))
+}
+func (l *customGeneralLogger) Println(v ...interface{}) {
+	l.logger.Println(formatLoggingMessage(*l, l.operation, fmt.Sprint(v...)))
+}
+func (l *customGeneralLogger) Printf(format string, v ...interface{}) {
+	l.logger.Printf(formatLoggingMessage(*l, l.operation, fmt.Sprintf(format, v...)))
+}
+
+func (l *customOperationLogger) Print(v ...interface{}) {
+	l.logger.Print(formatLoggingMessage(*l, l.operation, fmt.Sprint(v...)))
+}
+func (l *customOperationLogger) Println(v ...interface{}) {
+	l.logger.Println(formatLoggingMessage(*l, l.operation, fmt.Sprint(v...)))
+}
 func (l *customOperationLogger) Printf(format string, v ...interface{}) {
-	l.logger.Printf(formatOperationMessage(fmt.Sprintf(format, v...)))
+	l.logger.Printf(formatLoggingMessage(*l, l.operation, fmt.Sprintf(format, v...)))
 }
 
-func formatOperationMessage(message string) string {
-	currentTime := time.Now().UTC().Format("2006-01-02T15:04:05.999Z")
-	return fmt.Sprintf("[%s] [%s]: %s", currentTime, version, message)
-}
+func formatLoggingMessage(l interface{}, messageType string, message string) string {
+	switch loggerType := l.(type) {
+	case customGeneralLogger:
+		currentTime := time.Now().UTC().Format("2006-01-02T15:04:05.999Z")
 
-func initAllLogging() (generalFile *os.File, operationFile *os.File, generalErr error, operationErr error) {
-	generalFile, generalErr = initGeneralLogging()
-	if generalErr != nil {
-		fmt.Printf("Error opening the general logfile. %+v", generalErr)
-		generalErr = errors.Wrap(generalErr, "Failed to open general logfile")
+		//Caller(1) is the customlogger Print function in this file
+		//Caller(2) is the line that called the logger's print function
+		_, filePath, line, _ := runtime.Caller(2)
+
+		//Gets the line number and caller of the log message to identify what line logged
+		shortFileArr := strings.Split(filePath, "/")
+		shortFile := shortFileArr[len(shortFileArr)-1]
+
+		return fmt.Sprintf("[%s] [%s] [%s:%d] [%s]: %s", currentTime, version, shortFile, line, messageType, message)
+
+	case customOperationLogger:
+		currentTime := time.Now().UTC().Format("2006-01-02T15:04:05.999Z")
+		return fmt.Sprintf("[%s] [%s]: [Seq Num: %d] [operation: %s]", currentTime, version, environmentMrSeq, message)
+
+	default:
+		fmt.Printf("Unable to determine logger type %s, string not formatted", loggerType)
+		return message
 	}
-
-	operationFile, operationErr = initOperationLogging()
-	if operationErr != nil {
-		fmt.Printf("Error opening the operation logfile. %+v", operationErr)
-		operationErr = errors.Wrap(operationErr, "Failed to open operation logfile")
-	}
-	return generalFile, operationFile, generalErr, operationErr
 }
 
-func initGeneralLogging() (*os.File, error) {
+func initGeneralLogging() (file *os.File, err error) {
 	handlerEnv, handlerEnvErr := settings.GetHandlerEnvironment()
 
-	logfileLogName := extensionName + "-" + version + ".log"
+	logfileLogName := extensionName + ".log"
 	if handlerEnvErr != nil {
 		generalLogfile = logfileLogName
 	} else {
@@ -92,15 +91,15 @@ func initGeneralLogging() (*os.File, error) {
 		generalLogfile = path.Join(handlerEnv.HandlerEnvironment.LogFolder, logfileLogName)
 	}
 
-	file, err := os.OpenFile(generalLogfile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	file, err = os.OpenFile(generalLogfile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		return nil, errors.Wrapf(err, "Failed to create/open %s", generalLogfile)
 	}
 
 	//Sample: [2020-08-18T20:29:16.079902Z] [1.0.0.0] [main.go:148] [INFO]: Test1
-	infoLogger = customGeneralLogger{log.New(io.MultiWriter(file, os.Stdout), "", 0), infoOperation}
-	warningLogger = customGeneralLogger{log.New(io.MultiWriter(file, os.Stderr), "", 0), warningOperation}
-	errorLogger = customGeneralLogger{log.New(io.MultiWriter(file, os.Stderr), "", 0), errorOperation}
+	infoLogger = customGeneralLogger{customLogger{log.New(io.MultiWriter(file, os.Stdout), "", 0), infoOperation}}
+	warningLogger = customGeneralLogger{customLogger{log.New(io.MultiWriter(file, os.Stderr), "", 0), warningOperation}}
+	errorLogger = customGeneralLogger{customLogger{log.New(io.MultiWriter(file, os.Stderr), "", 0), errorOperation}}
 
 	if handlerEnvErr != nil {
 		errorLogger.Printf("Error opening handler environment %+v", handlerEnvErr)
@@ -108,7 +107,7 @@ func initGeneralLogging() (*os.File, error) {
 	return file, nil
 }
 
-func initOperationLogging() (*os.File, error) {
+func initOperationLogging() (file *os.File, err error) {
 	handlerEnv, handlerEnvErr := settings.GetHandlerEnvironment()
 
 	operationLogfileLogName := "operations-" + version + ".log"
@@ -121,16 +120,34 @@ func initOperationLogging() (*os.File, error) {
 		operationLogfile = path.Join(handlerEnv.HandlerEnvironment.LogFolder, operationLogfileLogName)
 	}
 
-	file, err := os.OpenFile(operationLogfile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	file, err = os.OpenFile(operationLogfile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		return nil, errors.Wrapf(err, "Failed to create/open %s", operationLogfile)
 	}
 
-	//Sample: [2020-08-18T20:29:16.079902Z] [1.0.0.0] [main.go:148] [INFO]: Test1
-	operationLogger = customOperationLogger{log.New(file, "", 0)}
+	//Sample: [2020-08-20T23:29:30.676Z] [1.0.0.2]: [Seq Num: 0] [operation: install]
+	operationLogger = customOperationLogger{customLogger{log.New(file, "", 0), ""}}
 
 	if handlerEnvErr != nil {
 		errorLogger.Printf("Error opening handler environment %+v", handlerEnvErr)
 	}
 	return file, nil
+}
+
+func initAllLogging() (generalFile *os.File, operationFile *os.File, loggingErr error) {
+	generalFile, loggingErr = initGeneralLogging()
+	if loggingErr != nil {
+		fmt.Printf("Error opening the general logfile. %+v", loggingErr)
+		loggingErr = errors.Wrap(loggingErr, "Failed to open general logfile")
+		return nil, nil, loggingErr
+	}
+
+	operationFile, loggingErr = initOperationLogging()
+	if loggingErr != nil {
+		fmt.Printf("Error opening the operation logfile. %+v", loggingErr)
+		loggingErr = errors.Wrap(loggingErr, "Failed to open operation logfile")
+		return nil, nil, loggingErr
+	}
+
+	return generalFile, operationFile, loggingErr
 }
