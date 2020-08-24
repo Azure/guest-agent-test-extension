@@ -6,4 +6,4 @@ bin/*
 *.status
 
 # Ignore the testing config json
-test.json
+./test.json

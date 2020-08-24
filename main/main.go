@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/Azure/azure-extension-foundation/sequence"
@@ -18,7 +19,7 @@ var (
 	versionMajor    = "1"
 	versionMinor    = "0"
 	versionBuild    = "0"
-	versionRevision = "2"
+	versionRevision = "3"
 	version         = fmt.Sprintf("%s.%s.%s.%s", versionMajor, versionMinor, versionBuild, versionRevision)
 
 	extensionMrSeq   int
@@ -35,6 +36,9 @@ var (
 	operationLogger                        customOperationLogger
 
 	executionErrors []string
+
+	extensionConfiguration extensionConfigurationStruct
+	failCommands           []failCommandsStruct
 )
 
 const (
@@ -44,6 +48,16 @@ const (
 	commandNotFoundError         // 2
 	logfileNotOpenedError        // 3
 )
+
+type extensionConfigurationStruct struct {
+	FailCommands []failCommandsStruct `json:"failCommands"`
+}
+
+type failCommandsStruct struct {
+	Command      string `json:"command"`
+	ErrorMessage string `json:"errorMessage"`
+	ExitCode     string `json:"exitCode"`
+}
 
 // extension specific PublicSettings
 type extensionPublicSettings struct {
@@ -73,7 +87,7 @@ func reportStatus(statusType string, operation string, message string) {
 			errorLogger.Println(errorMessage)
 			executionErrors = append(executionErrors, errorMessage)
 		}
-	case "failure":
+	case "error":
 		err := status.ReportError(environmentMrSeq, operation, message)
 		errorLogger.Println(message)
 		if err != nil {
@@ -87,10 +101,29 @@ func reportStatus(statusType string, operation string, message string) {
 
 }
 
+func checkForFailCommand(operation string) {
+	for _, failCommand := range failCommands {
+		if failCommand.Command == operation {
+			reportStatus("error", operation, failCommand.ErrorMessage)
+			if failCommand.ExitCode == "" {
+				errorLogger.Printf("%s failed with message: %s, but will not exit since provided exitcode is %s", failCommand.Command, failCommand.ErrorMessage, failCommand.ExitCode)
+			} else if exitCode, err := strconv.Atoi(failCommand.ExitCode); err == nil {
+				errorLogger.Printf("%s failed with message: %s exitCode: %s", failCommand.Command, failCommand.ErrorMessage, failCommand.ExitCode)
+				os.Exit(exitCode)
+			} else {
+				errorLogger.Printf("Unable to use provided exit code %+v", err)
+				os.Exit(generalExitError)
+			}
+
+		}
+	}
+}
+
 func testCommand(operation string) {
 	infoLogger.Printf("Extension MrSeq: %d, Environment MrSeq: %d", extensionMrSeq, environmentMrSeq)
 	operationLogger.Println(operation)
 	reportStatus("transitioning", operation, fmt.Sprintf("%s in progress", operation))
+	checkForFailCommand(operation)
 	reportStatus("success", operation, fmt.Sprintf("%s completed successfully", operation))
 }
 
@@ -107,9 +140,9 @@ func parseJSON(filename string) error {
 
 	//	Unmarshall the bytes from the JSON file
 	byteValue, _ := ioutil.ReadAll(jsonFile)
-	var jsonData map[string][]string
-	json.Unmarshal([]byte(byteValue), &jsonData)
+	json.Unmarshal([]byte(byteValue), &extensionConfiguration)
 
+	failCommands = extensionConfiguration.FailCommands
 	return nil
 }
 
@@ -134,6 +167,7 @@ func enable() {
 	operationLogger.Println(operation)
 	reportStatus("transitioning", operation, fmt.Sprintf("%s in progress", operation))
 
+	checkForFailCommand(operation)
 	var publicSettings extensionPublicSettings
 	var protectedSettings extensionPrivateSettings
 
@@ -167,7 +201,7 @@ func update() {
 func main() {
 	generalFile, operationFile, loggingErr := initAllLogging()
 	if loggingErr != nil {
-		fmt.Printf("Error opening general logfile %+v", loggingErr)
+		fmt.Printf("Error opening logfile %+v", loggingErr)
 		os.Exit(logfileNotOpenedError)
 	}
 	defer generalFile.Close()
