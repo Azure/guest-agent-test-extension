@@ -69,10 +69,10 @@ func reportStatus(statusType extensionStatus, operation string, message string) 
 	case statusSuccess:
 		err = status.ReportSuccess(environmentMrSeq, operation, message)
 		infoLogger.Println(message)
-	case "transitioning":
+	case statusTransitioning:
 		err = status.ReportTransitioning(environmentMrSeq, operation, message)
 		infoLogger.Println(message)
-	case "failure":
+	case statusError:
 		err = status.ReportError(environmentMrSeq, operation, message)
 		errorLogger.Println(message)
 	default:
