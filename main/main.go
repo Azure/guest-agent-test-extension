@@ -18,7 +18,7 @@ var (
 	versionMajor    = "1"
 	versionMinor    = "0"
 	versionBuild    = "0"
-	versionRevision = "2"
+	versionRevision = "1"
 	version         = fmt.Sprintf("%s.%s.%s.%s", versionMajor, versionMinor, versionBuild, versionRevision)
 
 	extensionMrSeq   int
@@ -31,8 +31,7 @@ var (
 
 	extensionName = "GuestAgentTestExtension"
 
-	infoLogger, warningLogger, errorLogger customGeneralLogger
-	operationLogger                        customOperationLogger
+	infoLogger, warningLogger, errorLogger, operationLogger customLogger
 
 	executionErrors []string
 )
@@ -55,34 +54,35 @@ type extensionPrivateSettings struct {
 	SecretString string `json:"secretString"`
 }
 
-func reportStatus(statusType string, operation string, message string) {
+// This is what is in the golang extension library, but these consts are not exported (start with caps)
+type extensionStatus string
+
+const (
+	statusTransitioning extensionStatus = "transitioning"
+	statusError         extensionStatus = "error"
+	statusSuccess       extensionStatus = "success"
+)
+
+func reportStatus(statusType extensionStatus, operation string, message string) {
+	var err error
 	switch statusType {
-	case "success":
-		err := status.ReportSuccess(environmentMrSeq, operation, message)
+	case statusSuccess:
+		err = status.ReportSuccess(environmentMrSeq, operation, message)
 		infoLogger.Println(message)
-		if err != nil {
-			errorMessage := fmt.Sprintf("Status reporting error: %+v", err)
-			errorLogger.Println(errorMessage)
-			executionErrors = append(executionErrors, errorMessage)
-		}
 	case "transitioning":
-		err := status.ReportTransitioning(environmentMrSeq, operation, message)
+		err = status.ReportTransitioning(environmentMrSeq, operation, message)
 		infoLogger.Println(message)
-		if err != nil {
-			errorMessage := fmt.Sprintf("Status reporting error: %+v", err)
-			errorLogger.Println(errorMessage)
-			executionErrors = append(executionErrors, errorMessage)
-		}
 	case "failure":
-		err := status.ReportError(environmentMrSeq, operation, message)
+		err = status.ReportError(environmentMrSeq, operation, message)
 		errorLogger.Println(message)
-		if err != nil {
-			errorMessage := fmt.Sprintf("Status reporting error: %+v", err)
-			errorLogger.Println(errorMessage)
-			executionErrors = append(executionErrors, errorMessage)
-		}
 	default:
 		warningLogger.Println("Status report type not recognized")
+	}
+
+	if err != nil {
+		errorMessage := fmt.Sprintf("Status reporting error: %+v", err)
+		errorLogger.Println(errorMessage)
+		executionErrors = append(executionErrors, errorMessage)
 	}
 
 }
@@ -90,8 +90,9 @@ func reportStatus(statusType string, operation string, message string) {
 func testCommand(operation string) {
 	infoLogger.Printf("Extension MrSeq: %d, Environment MrSeq: %d", extensionMrSeq, environmentMrSeq)
 	operationLogger.Println(operation)
-	reportStatus("transitioning", operation, fmt.Sprintf("%s in progress", operation))
-	reportStatus("success", operation, fmt.Sprintf("%s completed successfully", operation))
+
+	reportStatus(statusTransitioning, operation, fmt.Sprintf("%s in progress", operation))
+	reportStatus(statusSuccess, operation, fmt.Sprintf("%s completed successfully", operation))
 }
 
 func parseJSON(filename string) error {
@@ -132,7 +133,7 @@ func enable() {
 	operation := "enable"
 	infoLogger.Printf("Extension MrSeq: %d, Environment MrSeq: %d", extensionMrSeq, environmentMrSeq)
 	operationLogger.Println(operation)
-	reportStatus("transitioning", operation, fmt.Sprintf("%s in progress", operation))
+	reportStatus(statusTransitioning, operation, fmt.Sprintf("%s in progress", operation))
 
 	var publicSettings extensionPublicSettings
 	var protectedSettings extensionPrivateSettings
@@ -142,11 +143,13 @@ func enable() {
 		errorMessage := fmt.Sprintf("Error getting settings: %+v", err)
 		errorLogger.Println(errorMessage)
 		executionErrors = append(executionErrors, errorMessage)
+		reportStatus(statusError, operation, fmt.Sprintf("%s failed due to inability to getting settings", operation))
+		return
 	}
 	infoLogger.Printf("Public Settings: %v \t Protected Settings: %v", publicSettings, protectedSettings)
 	infoLogger.Printf("Provided Name is: %s", publicSettings.Name)
 
-	reportStatus("success", operation, fmt.Sprintf("%s completed successfully", operation))
+	reportStatus(statusSuccess, operation, fmt.Sprintf("%s completed successfully", operation))
 }
 
 func disable() {
@@ -214,10 +217,12 @@ func main() {
 	case "update":
 		update()
 	case "":
-		warningLogger.Println("No --command flag provided")
-		os.Exit(commandNotFoundError)
+		warningMessage := "No --command flag provided"
+		warningLogger.Println(warningMessage)
 	default:
-		warningLogger.Printf("Command \"%s\" not recognized", *commandStringPtr)
-		os.Exit(commandNotFoundError)
+		warningMessage := fmt.Sprintf("Command \"%s\" not recognized", *commandStringPtr)
+		warningLogger.Println(warningMessage)
 	}
+
+	reportExecutionStatus()
 }
