@@ -184,8 +184,9 @@ func main() {
 		warningLogger.Printf("Internal version %s does not match with environment variable version %s",
 			version, envExtensionVersion)
 	}
+	var err error
 
-	extensionMrSeq, environmentMrSeq, err := sequence.GetMostRecentSequenceNumber()
+	extensionMrSeq, environmentMrSeq, err = sequence.GetMostRecentSequenceNumber()
 	if err != nil {
 		warningLogger.Printf("Error getting sequence number %+v", err)
 		extensionMrSeq = -1
