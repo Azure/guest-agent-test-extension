@@ -59,7 +59,7 @@ func formatLoggingMessage(loggerType loggerMode, messagePrefix logPrefixType, me
 
 		return fmt.Sprintf("[%s] [%s] [%s:%d] [%s]: %s", currentTime, version, shortFile, line, messagePrefix, message)
 	case operationLoggerMode:
-		// Message type for the operation logger refers to one of either install,enable, etc
+		// Message prefix for the operation logger is always INFO
 		return fmt.Sprintf("[%s] [%s]: [Seq Num: %d] [%s]: %s", currentTime, version, environmentMrSeq, messagePrefix, message)
 	default:
 		fmt.Printf("Unable to determine logger type %s", loggerType)
