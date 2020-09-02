@@ -1,5 +1,9 @@
 # Ignore binary files
 bin/*
 
-# Ignore the log file
+# Ignore the log/any status file
 *.log
+*.status
+
+# Ignore the testing config json
+test.json

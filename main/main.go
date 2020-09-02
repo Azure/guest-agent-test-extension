@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/Azure/azure-extension-foundation/sequence"
 	"github.com/Azure/azure-extension-foundation/settings"
@@ -18,7 +19,7 @@ var (
 	versionMajor    = "1"
 	versionMinor    = "0"
 	versionBuild    = "0"
-	versionRevision = "2"
+	versionRevision = "1"
 	version         = fmt.Sprintf("%s.%s.%s.%s", versionMajor, versionMinor, versionBuild, versionRevision)
 
 	extensionMrSeq   int
@@ -31,11 +32,11 @@ var (
 
 	extensionName = "GuestAgentTestExtension"
 
-	infoLogger, warningLogger, errorLogger customGeneralLogger
-	operationLogger                        customOperationLogger
+	extensionConfiguration                                  extensionConfigurationStruct
+	failCommands                                            []failCommandsStruct
+	infoLogger, warningLogger, errorLogger, operationLogger customLogger
 
-	extensionConfiguration extensionConfigurationStruct
-	failCommands           []failCommandsStruct
+	executionErrors []string
 )
 
 const (
@@ -44,13 +45,6 @@ const (
 	generalExitError             // 1
 	commandNotFoundError         // 2
 	logfileNotOpenedError        // 3
-	mrSeqNotFoundError           // 4
-	shouldNotRunError            // 5
-	seqNumberSetError            // 6
-	statusReportingError         // 7
-	settingsNotFoundError        // 8
-	versionMismatchError         // 9
-	jsonParsingError             // 10
 )
 
 // extension specific PublicSettings
@@ -60,23 +54,32 @@ type extensionPublicSettings struct {
 
 // extension specific ProtectedSettings
 type extensionPrivateSettings struct {
-	SecretString       string   `json:"secretString"`
-	SecretScript       string   `json:"secretScript"`
-	FileURLs           []string `json:"fileUris"`
-	StorageAccountName string   `json:"storageAccountName"`
-	StorageAccountKey  string   `json:"storageAccountKey"`
+	SecretString string `json:"secretString"`
 }
 
-func install() {
-	operation := "install"
-	infoLogger.Printf("Extension MrSeq: %d, Environment MrSeq: %d", extensionMrSeq, environmentMrSeq)
-	operationLogger.Printf("[Seq Num: %d] [operation: %s]", environmentMrSeq, operation)
+// This is what is in the golang extension library, but these consts are not exported (start with caps)
+type extensionStatus string
 
-	err := status.ReportTransitioning(environmentMrSeq, operation, "installation in progress")
-	infoLogger.Println("Installation in progress")
-	if err != nil {
-		errorLogger.Printf("Status reporting error: %+v", err)
-		os.Exit(statusReportingError)
+const (
+	statusTransitioning extensionStatus = "transitioning"
+	statusError         extensionStatus = "error"
+	statusSuccess       extensionStatus = "success"
+)
+
+func reportStatus(statusType extensionStatus, operation string, message string) {
+	var err error
+	switch statusType {
+	case statusSuccess:
+		err = status.ReportSuccess(environmentMrSeq, operation, message)
+		infoLogger.Println(message)
+	case statusTransitioning:
+		err = status.ReportTransitioning(environmentMrSeq, operation, message)
+		infoLogger.Println(message)
+	case statusError:
+		err = status.ReportError(environmentMrSeq, operation, message)
+		errorLogger.Println(message)
+	default:
+		warningLogger.Println("Status report type not recognized")
 	}
 
 	for _, failCommand := range failCommands {
@@ -95,114 +98,76 @@ func install() {
 				errorLogger.Printf("Unable to use provided exit code %+v", err)
 				os.Exit(generalExitError)
 			}
-
 		}
 	}
 
 	err = status.ReportSuccess(environmentMrSeq, operation, "installation is complete")
 	if err != nil {
-		errorLogger.Printf("Status reporting error: %+v", err)
-		os.Exit(statusReportingError)
+		errorMessage := fmt.Sprintf("Status reporting error: %+v", err)
+		errorLogger.Println(errorMessage)
+		executionErrors = append(executionErrors, errorMessage)
 	}
-	infoLogger.Println("Installation is complete")
-	os.Exit(successfulExecution)
+}
+
+func testCommand(operation string) {
+	infoLogger.Printf("Extension MrSeq: %d, Environment MrSeq: %d", extensionMrSeq, environmentMrSeq)
+	operationLogger.Println(operation)
+
+	reportStatus(statusTransitioning, operation, fmt.Sprintf("%s in progress", operation))
+	reportStatus(statusSuccess, operation, fmt.Sprintf("%s completed successfully", operation))
+}
+
+func reportExecutionStatus() {
+	if executionErrors == nil {
+		os.Exit(successfulExecution)
+	} else {
+		errorMessage := strings.Join(executionErrors, "\n")
+		errorLogger.Println(errorMessage)
+		os.Exit(generalExitError)
+	}
+}
+
+func install() {
+	operation := "install"
+	testCommand(operation)
 }
 
 func enable() {
 	operation := "enable"
 	infoLogger.Printf("Extension MrSeq: %d, Environment MrSeq: %d", extensionMrSeq, environmentMrSeq)
-	operationLogger.Printf("[Seq Num: %d] [operation: %s]", environmentMrSeq, operation)
-
-	err := status.ReportTransitioning(environmentMrSeq, operation, "enabling in progress")
-	infoLogger.Println("enabling in progress")
-	if err != nil {
-		errorLogger.Printf("%+v", err)
-		os.Exit(statusReportingError)
-	}
+	operationLogger.Println(operation)
+	reportStatus(statusTransitioning, operation, fmt.Sprintf("%s in progress", operation))
 
 	var publicSettings extensionPublicSettings
 	var protectedSettings extensionPrivateSettings
 
-	err = settings.GetExtensionSettings(environmentMrSeq, &publicSettings, &protectedSettings)
+	err := settings.GetExtensionSettings(environmentMrSeq, &publicSettings, &protectedSettings)
 	if err != nil {
-		status.ReportError(environmentMrSeq, operation, err.Error())
-		errorLogger.Printf("%+v", err)
-		os.Exit(settingsNotFoundError)
+		errorMessage := fmt.Sprintf("Error getting settings: %+v", err)
+		errorLogger.Println(errorMessage)
+		executionErrors = append(executionErrors, errorMessage)
+		reportStatus(statusError, operation, fmt.Sprintf("%s failed due to inability to getting settings", operation))
+		return
 	}
 	infoLogger.Printf("Public Settings: %v \t Protected Settings: %v", publicSettings, protectedSettings)
-
 	infoLogger.Printf("Provided Name is: %s", publicSettings.Name)
 
-	err = status.ReportSuccess(environmentMrSeq, operation, "enabling is complete")
-	if err != nil {
-		errorLogger.Printf("%+v", err)
-		os.Exit(statusReportingError)
-	}
-	infoLogger.Println("enabling is complete")
-	os.Exit(successfulExecution)
+	reportStatus(statusSuccess, operation, fmt.Sprintf("%s completed successfully", operation))
 }
 
 func disable() {
 	operation := "disable"
-	infoLogger.Printf("Extension MrSeq: %d, Environment MrSeq: %d", extensionMrSeq, environmentMrSeq)
-	operationLogger.Printf("[Seq Num: %d] [operation: %s]", environmentMrSeq, operation)
-
-	err := status.ReportTransitioning(environmentMrSeq, operation, "disabling in progress")
-	infoLogger.Println("disabling in progress")
-	if err != nil {
-		errorLogger.Printf("%+v", err)
-		os.Exit(statusReportingError)
-	}
-
-	err = status.ReportSuccess(environmentMrSeq, operation, "disabling is complete")
-	if err != nil {
-		errorLogger.Printf("%+v", err)
-		os.Exit(statusReportingError)
-	}
-	infoLogger.Println("disabling is complete")
-	os.Exit(successfulExecution)
+	testCommand(operation)
 }
 
 func uninstall() {
 	operation := "uninstall"
-	infoLogger.Printf("Extension MrSeq: %d, Environment MrSeq: %d", extensionMrSeq, environmentMrSeq)
-	operationLogger.Printf("[Seq Num: %d] [operation: %s]", environmentMrSeq, operation)
-
-	err := status.ReportTransitioning(environmentMrSeq, operation, "uninstallation in progress")
-	infoLogger.Println("uninstallation in progress")
-	if err != nil {
-		errorLogger.Printf("%+v", err)
-		os.Exit(statusReportingError)
-	}
-
-	err = status.ReportSuccess(environmentMrSeq, operation, "uninstallation is complete")
-	if err != nil {
-		errorLogger.Printf("%+v", err)
-		os.Exit(statusReportingError)
-	}
-	infoLogger.Println("uninstallation is complete")
-	os.Exit(successfulExecution)
+	testCommand(operation)
 }
 
 func update() {
 	operation := "update"
-	infoLogger.Printf("Extension MrSeq: %d, Environment MrSeq: %d", extensionMrSeq, environmentMrSeq)
-	operationLogger.Printf("[Seq Num: %d] [operation: %s]", environmentMrSeq, operation)
-
-	err := status.ReportTransitioning(environmentMrSeq, operation, "updating in progress")
-	infoLogger.Println("updating in progress")
-	if err != nil {
-		errorLogger.Printf("%+v", err)
-		os.Exit(statusReportingError)
-	}
-
-	err = status.ReportSuccess(environmentMrSeq, operation, "updating is complete")
-	if err != nil {
-		errorLogger.Printf("%+v", err)
-		os.Exit(statusReportingError)
-	}
-	infoLogger.Println("updating is complete")
-	os.Exit(successfulExecution)
+	testCommand(operation)
 }
 
 type extensionConfigurationStruct struct {
@@ -237,16 +202,12 @@ func parseJSON(filename string) error {
 }
 
 func main() {
-	generalFile, operationFile, generalErr, operationErr := initAllLogging()
-	if generalErr != nil {
-		fmt.Printf("Error opening general logfile %+v", generalErr)
+	generalFile, operationFile, loggingErr := initAllLogging()
+	if loggingErr != nil {
+		fmt.Printf("Error opening general logfile %+v", loggingErr)
 		os.Exit(logfileNotOpenedError)
 	}
 	defer generalFile.Close()
-	if operationErr != nil {
-		fmt.Printf("Error opening operations logfile %+v", operationErr)
-		os.Exit(logfileNotOpenedError)
-	}
 	defer operationFile.Close()
 	//TODO: The file won't open if init logging throws an error, but file.close can also
 	//have errors related to disk writing delays. Will update with more robust error handling
@@ -257,8 +218,9 @@ func main() {
 		warningLogger.Printf("Internal version %s does not match with environment variable version %s",
 			version, envExtensionVersion)
 	}
+	var err error
 
-	extensionMrSeq, environmentMrSeq, err := sequence.GetMostRecentSequenceNumber()
+	extensionMrSeq, environmentMrSeq, err = sequence.GetMostRecentSequenceNumber()
 	if err != nil {
 		warningLogger.Printf("Error getting sequence number %+v", err)
 		extensionMrSeq = -1
@@ -290,10 +252,12 @@ func main() {
 	case "update":
 		update()
 	case "":
-		warningLogger.Println("No --command flag provided")
-		os.Exit(commandNotFoundError)
+		warningMessage := "No --command flag provided"
+		warningLogger.Println(warningMessage)
 	default:
-		warningLogger.Printf("Command \"%s\" not recognized", *commandStringPtr)
-		os.Exit(commandNotFoundError)
+		warningMessage := fmt.Sprintf("Command \"%s\" not recognized", *commandStringPtr)
+		warningLogger.Println(warningMessage)
 	}
+
+	reportExecutionStatus()
 }
