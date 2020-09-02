@@ -88,8 +88,9 @@ func reportStatus(statusType extensionStatus, operation string, message string) 
 
 			err := status.ReportError(environmentMrSeq, failCommand.Command, failCommand.ErrorMessage)
 			if err != nil {
-				errorLogger.Printf("Status reporting error: %+v", err)
-				os.Exit(statusReportingError)
+				errorMessage := fmt.Sprintf("Status reporting error: %+v", err)
+				errorLogger.Println(errorMessage)
+				executionErrors = append(executionErrors, errorMessage)
 			}
 
 			if exitCode, err := strconv.Atoi(failCommand.ExitCode); err == nil {
