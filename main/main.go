@@ -72,7 +72,7 @@ func reportStatus(statusType extensionStatus, operation string, message string) 
 	isFailCommand := 0
 
 	for _, failCommand := range failCommands {
-		if failCommand.Command == operation {
+		if failCommand.Command == operation && statusType == statusSuccess {
 			errorLogger.Printf("%s failed with message: %s Expected exitCode: %s", failCommand.Command, failCommand.ErrorMessage, failCommand.ExitCode)
 
 			err := status.ReportError(environmentMrSeq, operation, failCommand.ErrorMessage)
