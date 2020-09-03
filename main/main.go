@@ -69,6 +69,30 @@ const (
 
 func reportStatus(statusType extensionStatus, operation string, message string) {
 	var err error
+
+	for _, failCommand := range failCommands {
+		if failCommand.Command == operation {
+			errorLogger.Printf("%s failed with message: %s Expected exitCode: %s", failCommand.Command, failCommand.ErrorMessage, failCommand.ExitCode)
+
+			err := status.ReportError(environmentMrSeq, operation, failCommand.ErrorMessage)
+			if err != nil {
+				errorMessage := fmt.Sprintf("Status reporting error: %+v", err)
+				errorLogger.Println(errorMessage)
+				executionErrors = append(executionErrors, errorMessage)
+			}
+
+			if exitCode, err := strconv.Atoi(failCommand.ExitCode); err == nil {
+				intendedExitCode = exitCode
+			} else {
+				errorMessage := fmt.Sprintf("Unable to use provided exit code %+v", err)
+				errorLogger.Println(errorMessage)
+				executionErrors = append(executionErrors, errorMessage)
+			}
+
+			return
+		}
+	}
+
 	switch statusType {
 	case statusSuccess:
 		err = status.ReportSuccess(environmentMrSeq, operation, message)
@@ -83,27 +107,6 @@ func reportStatus(statusType extensionStatus, operation string, message string) 
 		warningLogger.Println("Status report type not recognized")
 	}
 
-	for _, failCommand := range failCommands {
-		if failCommand.Command == operation {
-			errorLogger.Printf("%s failed with message: %s exitCode: %s", failCommand.Command, failCommand.ErrorMessage, failCommand.ExitCode)
-
-			err := status.ReportError(environmentMrSeq, failCommand.Command, failCommand.ErrorMessage)
-			if err != nil {
-				errorMessage := fmt.Sprintf("Status reporting error: %+v", err)
-				errorLogger.Println(errorMessage)
-				executionErrors = append(executionErrors, errorMessage)
-			}
-
-			if exitCode, err := strconv.Atoi(failCommand.ExitCode); err == nil {
-				intendedExitCode = exitCode
-			} else {
-				errorLogger.Printf("Unable to use provided exit code %+v", err)
-				os.Exit(generalExitError)
-			}
-		}
-	}
-
-	err = status.ReportSuccess(environmentMrSeq, operation, "installation is complete")
 	if err != nil {
 		errorMessage := fmt.Sprintf("Status reporting error: %+v", err)
 		errorLogger.Println(errorMessage)
