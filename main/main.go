@@ -36,7 +36,8 @@ var (
 	failCommands                                            []failCommandsStruct
 	infoLogger, warningLogger, errorLogger, operationLogger customLogger
 
-	executionErrors []string
+	executionErrors  []string
+	intendedExitCode = successfulExecution
 )
 
 const (
@@ -94,7 +95,7 @@ func reportStatus(statusType extensionStatus, operation string, message string) 
 			}
 
 			if exitCode, err := strconv.Atoi(failCommand.ExitCode); err == nil {
-				os.Exit(exitCode)
+				intendedExitCode = exitCode
 			} else {
 				errorLogger.Printf("Unable to use provided exit code %+v", err)
 				os.Exit(generalExitError)
@@ -120,7 +121,8 @@ func testCommand(operation string) {
 
 func reportExecutionStatus() {
 	if executionErrors == nil {
-		os.Exit(successfulExecution)
+		infoLogger.Printf("Exiting with Code: %d", intendedExitCode)
+		os.Exit(intendedExitCode)
 	} else {
 		errorMessage := strings.Join(executionErrors, "\n")
 		errorLogger.Println(errorMessage)
