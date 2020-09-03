@@ -89,7 +89,10 @@ func reportStatus(statusType extensionStatus, operation string, message string) 
 				executionErrors = append(executionErrors, errorMessage)
 			}
 
-			return
+			// Cannot update status as successful for a failCommand
+			if statusType == statusSuccess {
+				return
+			}
 		}
 	}
 
