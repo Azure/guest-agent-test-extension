@@ -69,6 +69,7 @@ const (
 
 func reportStatus(statusType extensionStatus, operation string, message string) {
 	var err error
+	isFailCommand := 0
 
 	for _, failCommand := range failCommands {
 		if failCommand.Command == operation {
@@ -83,23 +84,22 @@ func reportStatus(statusType extensionStatus, operation string, message string) 
 
 			if exitCode, err := strconv.Atoi(failCommand.ExitCode); err == nil {
 				intendedExitCode = exitCode
+				isFailCommand = 1
 			} else {
 				errorMessage := fmt.Sprintf("Unable to use provided exit code %+v", err)
 				errorLogger.Println(errorMessage)
 				executionErrors = append(executionErrors, errorMessage)
-			}
-
-			// Cannot update status as successful for a failCommand
-			if statusType == statusSuccess {
-				return
 			}
 		}
 	}
 
 	switch statusType {
 	case statusSuccess:
-		err = status.ReportSuccess(environmentMrSeq, operation, message)
-		infoLogger.Println(message)
+		// no success status for fail commands, status will have already been updated
+		if isFailCommand == 0 {
+			err = status.ReportSuccess(environmentMrSeq, operation, message)
+			infoLogger.Println(message)
+		}
 	case statusTransitioning:
 		err = status.ReportTransitioning(environmentMrSeq, operation, message)
 		infoLogger.Println(message)
