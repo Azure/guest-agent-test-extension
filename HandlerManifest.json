@@ -2,11 +2,11 @@
     "name": "GuestAgentTestExtension",
     "version": 1.0,
     "handlerManifest": {
-      "installCommand": "bin/GuestAgentTestExtension --command=install",
-      "uninstallCommand": "bin/GuestAgentTestExtension --command=uninstall",
-      "updateCommand": "bin/GuestAgentTestExtension --command=update",
-      "enableCommand": "bin/GuestAgentTestExtension --command=enable",
-      "disableCommand": "bin/GuestAgentTestExtension --command=disable",
+      "installCommand": "bin/GuestAgentTestExtension_linux --command=install --jsonfile=runtimeConfiguration.json",
+      "uninstallCommand": "bin/GuestAgentTestExtension_linux --command=uninstall --jsonfile=runtimeConfiguration.json",
+      "updateCommand": "bin/GuestAgentTestExtension_linux --command=update --jsonfile=runtimeConfiguration.json",
+      "enableCommand": "bin/GuestAgentTestExtension_linux --command=enable --jsonfile=runtimeConfiguration.json",
+      "disableCommand": "bin/GuestAgentTestExtension_linux --command=disable --jsonfile=runtimeConfiguration.json",
       "updateMode": "UpdateWithoutInstall",
       "rebootAfterInstall": false,
       "reportHeartbeat": false

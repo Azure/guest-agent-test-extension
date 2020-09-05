@@ -3,12 +3,15 @@
         {
             "command" : "install",
             "errorMessage" : "install failure due to specification in failCommand",
-            "exitCode" : "9"
+            "exitCode" : "9",
+            "reportStatusCorrectly" : "true"
         },
         {
             "command" : "enable",
             "errorMessage" : "enable failure due to specification in failCommand",
-            "exitCode" : "10"
+            "exitCode" : "10",
+            "reportStatusCorrectly" : "true"
         }
     ]
 }
+

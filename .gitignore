@@ -4,6 +4,3 @@ bin/*
 # Ignore the log/any status file
 *.log
 *.status
-
-# Ignore the testing config json
-test.json

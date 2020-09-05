@@ -48,6 +48,17 @@ const (
 	logfileNotOpenedError        // 3
 )
 
+type extensionConfigurationStruct struct {
+	FailCommands []failCommandsStruct `json:"failCommands"`
+}
+
+type failCommandsStruct struct {
+	Command               string `json:"command"`
+	ErrorMessage          string `json:"errorMessage"`
+	ExitCode              string `json:"exitCode"`
+	ReportStatusCorrectly string `json:"reportStatusCorrectly"`
+}
+
 // extension specific PublicSettings
 type extensionPublicSettings struct {
 	Name string `json:"name"`
@@ -75,11 +86,13 @@ func reportStatus(statusType extensionStatus, operation string, message string) 
 		if failCommand.Command == operation && statusType == statusSuccess {
 			errorLogger.Printf("%s failed with message: %s Expected exitCode: %s", failCommand.Command, failCommand.ErrorMessage, failCommand.ExitCode)
 
-			err := status.ReportError(environmentMrSeq, operation, failCommand.ErrorMessage)
-			if err != nil {
-				errorMessage := fmt.Sprintf("Status reporting error: %+v", err)
-				errorLogger.Println(errorMessage)
-				executionErrors = append(executionErrors, errorMessage)
+			if failCommand.ReportStatusCorrectly == "true" {
+				err := status.ReportError(environmentMrSeq, operation, failCommand.ErrorMessage)
+				if err != nil {
+					errorMessage := fmt.Sprintf("Status reporting error: %+v", err)
+					errorLogger.Println(errorMessage)
+					executionErrors = append(executionErrors, errorMessage)
+				}
 			}
 
 			if exitCode, err := strconv.Atoi(failCommand.ExitCode); err == nil {
@@ -177,16 +190,6 @@ func uninstall() {
 func update() {
 	operation := "update"
 	testCommand(operation)
-}
-
-type extensionConfigurationStruct struct {
-	FailCommands []failCommandsStruct `json:"failCommands"`
-}
-
-type failCommandsStruct struct {
-	Command      string `json:"command"`
-	ErrorMessage string `json:"errorMessage"`
-	ExitCode     string `json:"exitCode"`
 }
 
 func parseJSON(filename string) error {
