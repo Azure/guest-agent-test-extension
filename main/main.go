@@ -143,6 +143,7 @@ func reportStatus(statusType extensionStatus, operation string, message string) 
 	}
 }
 
+// Basic functionality for commands that do not have much special behavior (like enable)
 func testCommand(operation string) {
 	infoLogger.Printf("Extension MrSeq: %d, Environment MrSeq: %d", extensionMrSeq, environmentMrSeq)
 	operationLogger.Println(operation)
@@ -151,6 +152,8 @@ func testCommand(operation string) {
 	reportStatus(statusSuccess, operation, fmt.Sprintf("%s completed successfully", operation))
 }
 
+// Handles how the extension exits when execution is done. Prints out errors if there are any and uses
+// any exit codes that were specified
 func reportExecutionStatus() {
 	if executionErrors == nil {
 		infoLogger.Printf("Exiting with Code: %d", intendedExitCode)
@@ -167,6 +170,7 @@ func install() {
 	testCommand(operation)
 }
 
+// Enable prints out the name provided in the public settings
 func enable() {
 	operation := "enable"
 	infoLogger.Printf("Extension MrSeq: %d, Environment MrSeq: %d", extensionMrSeq, environmentMrSeq)
@@ -205,6 +209,7 @@ func update() {
 	testCommand(operation)
 }
 
+// Parses the JSON file using the predetermined structs for formatting
 func parseJSON(filename string) error {
 	//	Open the provided file
 	jsonFile, err := os.Open(filename)
@@ -223,6 +228,8 @@ func parseJSON(filename string) error {
 
 	failCommands = extensionConfiguration.FailCommands
 
+	// Future configuation paramters should be set here
+
 	return nil
 }
 
@@ -234,9 +241,9 @@ func main() {
 	}
 	defer generalFile.Close()
 	defer operationFile.Close()
-	//TODO: The file won't open if init logging throws an error, but file.close can also
-	//have errors related to disk writing delays. Will update with more robust error handling
-	//but for now this works well enough
+	// TODO: The file won't open if init logging throws an error, but file.close can also
+	// have errors related to disk writing delays. This works well enough, but since this is
+	// a testing extension, it might be worth adding additional error handling
 
 	envExtensionVersion := os.Getenv("AZURE_GUEST_AGENT_EXTENSION_VERSION")
 	if envExtensionVersion != "" && envExtensionVersion != version {

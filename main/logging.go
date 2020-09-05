@@ -86,11 +86,10 @@ func initLoggingFilepath(logfileLogName string) (file *os.File, err error) {
 }
 
 func initGeneralLogging() (file *os.File, err error) {
-
 	logfileLogName := extensionName + ".log"
 	file, err = initLoggingFilepath(logfileLogName)
 
-	//Sample: [2020-08-18T20:29:16.079902Z] [1.0.0.0] [main.go:148] [INFO]: Test1
+	//Sample: [2020-08-18T20:29:16.079Z] [1.0.0.0] [main.go:148] [INFO]: Test1
 	infoLogger = customLogger{log.New(io.MultiWriter(file, os.Stdout), "", 0), infoOperation, generalLoggerMode}
 	warningLogger = customLogger{log.New(io.MultiWriter(file, os.Stderr), "", 0), warningOperation, generalLoggerMode}
 	errorLogger = customLogger{log.New(io.MultiWriter(file, os.Stderr), "", 0), errorOperation, generalLoggerMode}
@@ -105,7 +104,7 @@ func initOperationLogging() (file *os.File, err error) {
 	operationLogfileLogName := "operations-" + version + ".log"
 	file, err = initLoggingFilepath(operationLogfileLogName)
 
-	//Sample: [2020-08-20T23:29:30.676Z] [1.0.0.2]: [Seq Num: 0] [operation: install]
+	//Sample: [2020-09-05T00:23:40.578Z] [1.0.0.1]: [Seq Num: -1] [INFO]: install
 	operationLogger = customLogger{log.New(file, "", 0), infoOperation, operationLoggerMode}
 
 	if err != nil {
