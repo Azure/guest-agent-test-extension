@@ -20,3 +20,7 @@ To run the program, you should use the make build_all command. This will create 
 executables for all supported operating systems into the folder.
 
 For usage information, run the binary with the help flag ie (--h or --help)
+
+# Sample command to load onto a live VM
+
+Set-AzVMExtension -ResourceGroupName $rgName -Location "centraluseuap" -VMName $vmName -Name "GATestExtension" -Publisher "Microsoft.Azure.Extensions.Edp" -Type "GATestExtGo" -TypeHandlerVersion "1.0" -Settings $settings
