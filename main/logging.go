@@ -7,7 +7,6 @@ import (
 	"os"
 	"path"
 	"runtime"
-	"strings"
 	"time"
 
 	"github.com/Azure/azure-extension-foundation/settings"
@@ -54,8 +53,7 @@ func formatLoggingMessage(loggerType loggerMode, messagePrefix logPrefixType, me
 		_, filePath, line, _ := runtime.Caller(2)
 
 		//Gets the line number and caller of the log message to identify what line logged
-		shortFileArr := strings.Split(filePath, "/")
-		shortFile := shortFileArr[len(shortFileArr)-1]
+		_, shortFile := path.Split(filePath)
 
 		return fmt.Sprintf("[%s] [%s] [%s:%d] [%s]: %s", currentTime, version, shortFile, line, messagePrefix, message)
 	case operationLoggerMode:
@@ -71,6 +69,7 @@ func initLoggingFilepath(logfileLogName string) (file *os.File, err error) {
 	handlerEnv, handlerEnvErr := settings.GetHandlerEnvironment()
 	var logfileFilepath string
 
+	// Create the handler environment specified folder if it does not exist
 	if handlerEnvErr != nil {
 		logfileFilepath = logfileLogName
 		fmt.Printf("Error opening handler environment %+v", handlerEnvErr)
@@ -81,6 +80,7 @@ func initLoggingFilepath(logfileLogName string) (file *os.File, err error) {
 		logfileFilepath = path.Join(handlerEnv.HandlerEnvironment.LogFolder, logfileLogName)
 	}
 
+	// Create the log file if it does not exist, otherwise just open it
 	file, err = os.OpenFile(logfileFilepath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	return file, err
 }

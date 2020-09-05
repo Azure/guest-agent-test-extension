@@ -34,7 +34,7 @@ var (
 	failCommands                                            []failCommandsStruct
 	infoLogger, warningLogger, errorLogger, operationLogger customLogger
 
-	// Execution errors that are encountered during execution are stored and then reported at the end
+	// Execution errors that are encountered are stored and then reported at the end
 	executionErrors []string
 	// Any exit code specified like in failCommand that should be used to exit
 	intendedExitCode = successfulExecution
@@ -143,7 +143,7 @@ func reportStatus(statusType extensionStatus, operation string, message string) 
 	}
 }
 
-// Basic functionality for commands that do not have much special behavior (like enable)
+// Basic functionality for commands that do not have much special behavior (like install)
 func testCommand(operation string) {
 	infoLogger.Printf("Extension MrSeq: %d, Environment MrSeq: %d", extensionMrSeq, environmentMrSeq)
 	operationLogger.Println(operation)
@@ -228,7 +228,7 @@ func parseJSON(filename string) error {
 
 	failCommands = extensionConfiguration.FailCommands
 
-	// Future configuation paramters should be set here
+	// TODO: Future configuation paramters should be set here
 
 	return nil
 }
