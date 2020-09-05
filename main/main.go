@@ -86,6 +86,8 @@ func reportStatus(statusType extensionStatus, operation string, message string) 
 		if failCommand.Command == operation && statusType == statusSuccess {
 			errorLogger.Printf("%s failed with message: %s Expected exitCode: %s", failCommand.Command, failCommand.ErrorMessage, failCommand.ExitCode)
 
+			errorLogger.Printf("%s will report status correctly before exiting: %s", failCommand.Command, failCommand.ReportStatusCorrectly)
+
 			if failCommand.ReportStatusCorrectly == "true" {
 				err := status.ReportError(environmentMrSeq, operation, failCommand.ErrorMessage)
 				if err != nil {

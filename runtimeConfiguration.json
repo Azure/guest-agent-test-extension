@@ -4,7 +4,7 @@
             "command" : "install",
             "errorMessage" : "install failure due to specification in failCommand",
             "exitCode" : "9",
-            "reportStatusCorrectly" : "true"
+            "reportStatusCorrectly" : "false"
         },
         {
             "command" : "enable",
