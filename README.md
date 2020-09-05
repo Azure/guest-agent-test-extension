@@ -16,7 +16,7 @@ contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additio
 
 # Building the Binaries
 
-To run the program, you should use the make build_all command. This will create a "bin" directory and then put
+To run the program, you should use theprovided makefile commands. This will create a "bin" directory and then put
 executables for all supported operating systems into the folder.
 
 For usage information, run the binary with the help flag ie (--h or --help)
@@ -24,3 +24,27 @@ For usage information, run the binary with the help flag ie (--h or --help)
 # Sample command to load onto a live VM
 
 Set-AzVMExtension -ResourceGroupName $rgName -Location "centraluseuap" -VMName $vmName -Name "GATestExtension" -Publisher "Microsoft.Azure.Extensions.Edp" -Type "GATestExtGo" -TypeHandlerVersion "1.0" -Settings $settings
+
+# Runtime Configuration 
+
+This file controls the behavior of the extension once it is compiled. Currently this just takes the form of failCommand specifciations
+
+FailCommands is essentially a list of commands that we want to fail. We can control the command to fail, the error Message at failure, the exit code, and whether we want to report the error status correctly. If reportStatusCorrectly is false, the extension status will be transitioning at the end of the execution.
+
+Sample:
+{
+    "failCommands": [
+        {
+            "command" : "install",
+            "errorMessage" : "install failure due to specification in failCommand",
+            "exitCode" : "9",
+            "reportStatusCorrectly" : "false"
+        },
+        {
+            "command" : "enable",
+            "errorMessage" : "enable failure due to specification in failCommand",
+            "exitCode" : "10",
+            "reportStatusCorrectly" : "true"
+        }
+    ]
+}

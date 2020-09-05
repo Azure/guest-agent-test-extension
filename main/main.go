@@ -25,8 +25,6 @@ var (
 	extensionMrSeq   int
 	environmentMrSeq int
 
-	// Logging is currently set up to create/add to the logile in the directory from where the binary is executed
-	// TODO Read this in from Handler Env
 	generalLogfile   string
 	operationLogfile string
 
@@ -36,22 +34,26 @@ var (
 	failCommands                                            []failCommandsStruct
 	infoLogger, warningLogger, errorLogger, operationLogger customLogger
 
-	executionErrors  []string
+	// Execution errors that are encountered during execution are stored and then reported at the end
+	executionErrors []string
+	// Any exit code specified like in failCommand that should be used to exit
 	intendedExitCode = successfulExecution
 )
 
 const (
-	// Exit Codes
+	// Pre-determined exeit codes
 	successfulExecution   = iota // 0
 	generalExitError             // 1
 	commandNotFoundError         // 2
 	logfileNotOpenedError        // 3
 )
 
+// TODO future runtime configuration can be added in this struct
 type extensionConfigurationStruct struct {
 	FailCommands []failCommandsStruct `json:"failCommands"`
 }
 
+// Format of the failCommands in the runtime configuration json file
 type failCommandsStruct struct {
 	Command               string `json:"command"`
 	ErrorMessage          string `json:"errorMessage"`
@@ -69,7 +71,7 @@ type extensionPrivateSettings struct {
 	SecretString string `json:"secretString"`
 }
 
-// This is what is in the golang extension library, but these consts are not exported (start with caps)
+// This is an implementation from the golang extension library, but these consts are not exported so are reproduced here
 type extensionStatus string
 
 const (
@@ -78,16 +80,21 @@ const (
 	statusSuccess       extensionStatus = "success"
 )
 
+// Reports the status with error handling for an operation
 func reportStatus(statusType extensionStatus, operation string, message string) {
 	var err error
 	isFailCommand := 0
 
+	// TODO: This could probably be refactored but unfortunately I do not have time to finish the implementation
+	// if failCommands were instead stored as a map[string] []string where the accessing string was operation,
+	// we would not have to cycle through all the fail commands every time and could just read the map directly
 	for _, failCommand := range failCommands {
 		if failCommand.Command == operation && statusType == statusSuccess {
 			errorLogger.Printf("%s failed with message: %s Expected exitCode: %s", failCommand.Command, failCommand.ErrorMessage, failCommand.ExitCode)
 
 			errorLogger.Printf("%s will report status correctly before exiting: %s", failCommand.Command, failCommand.ReportStatusCorrectly)
 
+			// Only report an error in status if the failCommand should report status correctly
 			if failCommand.ReportStatusCorrectly == "true" {
 				err := status.ReportError(environmentMrSeq, operation, failCommand.ErrorMessage)
 				if err != nil {
@@ -97,6 +104,7 @@ func reportStatus(statusType extensionStatus, operation string, message string) 
 				}
 			}
 
+			// Get the exit code and save it for when os.Exit will be called
 			if exitCode, err := strconv.Atoi(failCommand.ExitCode); err == nil {
 				intendedExitCode = exitCode
 				isFailCommand = 1
@@ -111,6 +119,9 @@ func reportStatus(statusType extensionStatus, operation string, message string) 
 	switch statusType {
 	case statusSuccess:
 		// no success status for fail commands, status will have already been updated
+		// TODO this implementaiton is only correct for a failure after transitioning has started.
+		// if we want to support a scenario where the extension somehow failed to start transitioning
+		// this would have to be changed
 		if isFailCommand == 0 {
 			err = status.ReportSuccess(environmentMrSeq, operation, message)
 			infoLogger.Println(message)
