@@ -4,11 +4,9 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io"
 	"io/ioutil"
-	"log"
 	"os"
-	"path"
+	"strings"
 
 	"github.com/Azure/azure-extension-foundation/sequence"
 	"github.com/Azure/azure-extension-foundation/settings"
@@ -17,15 +15,25 @@ import (
 )
 
 var (
-	version            = "1.0.0.0"
-	extensionShortName = "GATestExt"
+	versionMajor    = "1"
+	versionMinor    = "0"
+	versionBuild    = "0"
+	versionRevision = "1"
+	version         = fmt.Sprintf("%s.%s.%s.%s", versionMajor, versionMinor, versionBuild, versionRevision)
+
+	extensionMrSeq   int
+	environmentMrSeq int
 
 	// Logging is currently set up to create/add to the logile in the directory from where the binary is executed
 	// TODO Read this in from Handler Env
-	logfile        string
-	logfileLogName = "GuestAgentTestExtension.log"
+	generalLogfile   string
+	operationLogfile string
 
-	infoLogger, warningLogger, errorLogger customLogger
+	extensionName = "GuestAgentTestExtension"
+
+	infoLogger, warningLogger, errorLogger, operationLogger customLogger
+
+	executionErrors []string
 )
 
 const (
@@ -34,31 +42,57 @@ const (
 	generalExitError             // 1
 	commandNotFoundError         // 2
 	logfileNotOpenedError        // 3
-	mrSeqNotFoundError           // 4
-	shouldNotRunError            // 5
-	seqNumberSetError            // 6
-	statusReportingError         // 7
-	settingsNotFoundError        // 8
 )
 
-func install() {
-	infoLogger.Println("Installed Succesfully.")
+// extension specific PublicSettings
+type extensionPublicSettings struct {
+	Name string `json:"name"`
 }
 
-func enable() {
-	infoLogger.Println("Enabled Successfully.")
+// extension specific ProtectedSettings
+type extensionPrivateSettings struct {
+	SecretString string `json:"secretString"`
 }
 
-func disable() {
-	infoLogger.Println("Disabled Successfully.")
+// This is what is in the golang extension library, but these consts are not exported (start with caps)
+type extensionStatus string
+
+const (
+	statusTransitioning extensionStatus = "transitioning"
+	statusError         extensionStatus = "error"
+	statusSuccess       extensionStatus = "success"
+)
+
+func reportStatus(statusType extensionStatus, operation string, message string) {
+	var err error
+	switch statusType {
+	case statusSuccess:
+		err = status.ReportSuccess(environmentMrSeq, operation, message)
+		infoLogger.Println(message)
+	case statusTransitioning:
+		err = status.ReportTransitioning(environmentMrSeq, operation, message)
+		infoLogger.Println(message)
+	case statusError:
+		err = status.ReportError(environmentMrSeq, operation, message)
+		errorLogger.Println(message)
+	default:
+		warningLogger.Println("Status report type not recognized")
+	}
+
+	if err != nil {
+		errorMessage := fmt.Sprintf("Status reporting error: %+v", err)
+		errorLogger.Println(errorMessage)
+		executionErrors = append(executionErrors, errorMessage)
+	}
+
 }
 
-func uninstall() {
-	infoLogger.Println("Uninstalled Successfully.")
-}
+func testCommand(operation string) {
+	infoLogger.Printf("Extension MrSeq: %d, Environment MrSeq: %d", extensionMrSeq, environmentMrSeq)
+	operationLogger.Println(operation)
 
-func update() {
-	infoLogger.Println("Updated Successfully.")
+	reportStatus(statusTransitioning, operation, fmt.Sprintf("%s in progress", operation))
+	reportStatus(statusSuccess, operation, fmt.Sprintf("%s completed successfully", operation))
 }
 
 func parseJSON(filename string) error {
@@ -67,124 +101,98 @@ func parseJSON(filename string) error {
 	if err != nil {
 		return errors.Wrapf(err, "Failed to open \"%s\"", filename)
 	}
-	infoLogger.Println("File opened successfully")
+	infoLogger.Println("JSON File opened successfully")
 
 	// Defer file closing until parseJSON() returns
 	defer jsonFile.Close()
 
 	//	Unmarshall the bytes from the JSON file
-	// 	TODO: If we know the exact format, we can read the JSON into a struct which might be cleaner
 	byteValue, _ := ioutil.ReadAll(jsonFile)
-	var result map[string]interface{}
-	json.Unmarshal([]byte(byteValue), &result)
+	var jsonData map[string][]string
+	json.Unmarshal([]byte(byteValue), &jsonData)
 
-	// Get the map with the name "keys"
-	keys := result["keys"].(map[string]interface{})
-
-	//	Parse each key value and reverse the string by appending characters backwards
-	for key, value := range keys {
-		reverseValue := ""
-		for _, val := range value.(string) {
-			reverseValue = string(val) + reverseValue
-		}
-
-		infoLogger.Println(key, reverseValue)
-	}
 	return nil
 }
 
-/* 	Open the logfile and configure the loggers that will be used
-*
-*	The main difference between types of loggers is the label (eg INFO) and additional data provided .
- */
-func initLogging() (*os.File, error) {
-	handlerEnv, err := settings.GetHandlerEnvironment()
-	if err != nil {
-		return nil, errors.Wrap(err, "Failed to open handler environment")
+func reportExecutionStatus() {
+	if executionErrors == nil {
+		os.Exit(successfulExecution)
+	} else {
+		errorMessage := strings.Join(executionErrors, "\n")
+		errorLogger.Println(errorMessage)
+		os.Exit(generalExitError)
 	}
-
-	logfile = path.Join(handlerEnv.HandlerEnvironment.LogFolder, logfileLogName)
-
-	file, err := os.OpenFile(logfile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		return nil, errors.Wrapf(err, "Failed to create/open %s", logfile)
-	}
-
-	//Sample: [2020-08-18T20:29:16.079902Z] [1.0.0.0] [main.go:148] [INFO]: Test1
-	infoLogger = customLogger{log.New(io.MultiWriter(file, os.Stdout), "", 0), infoOperation}
-	warningLogger = customLogger{log.New(io.MultiWriter(file, os.Stderr), "", 0), warningOperation}
-	errorLogger = customLogger{log.New(io.MultiWriter(file, os.Stderr), "", 0), errorOperation}
-
-	return file, nil
 }
 
-// extension specific PublicSettings
-type PublicSettings struct {
-	Script   string   `json:"script"`
-	FileURLs []string `json:"fileUris"`
+func install() {
+	operation := "install"
+	testCommand(operation)
 }
 
-// extension specific ProtectedSettings
-type ProtectedSettings struct {
-	SecretString       string   `json:"secretString"`
-	SecretScript       string   `json:"secretScript"`
-	FileURLs           []string `json:"fileUris"`
-	StorageAccountName string   `json:"storageAccountName"`
-	StorageAccountKey  string   `json:"storageAccountKey"`
+func enable() {
+	operation := "enable"
+	infoLogger.Printf("Extension MrSeq: %d, Environment MrSeq: %d", extensionMrSeq, environmentMrSeq)
+	operationLogger.Println(operation)
+	reportStatus(statusTransitioning, operation, fmt.Sprintf("%s in progress", operation))
+
+	var publicSettings extensionPublicSettings
+	var protectedSettings extensionPrivateSettings
+
+	err := settings.GetExtensionSettings(environmentMrSeq, &publicSettings, &protectedSettings)
+	if err != nil {
+		errorMessage := fmt.Sprintf("Error getting settings: %+v", err)
+		errorLogger.Println(errorMessage)
+		executionErrors = append(executionErrors, errorMessage)
+		reportStatus(statusError, operation, fmt.Sprintf("%s failed due to inability to getting settings", operation))
+		return
+	}
+	infoLogger.Printf("Public Settings: %v \t Protected Settings: %v", publicSettings, protectedSettings)
+	infoLogger.Printf("Provided Name is: %s", publicSettings.Name)
+
+	reportStatus(statusSuccess, operation, fmt.Sprintf("%s completed successfully", operation))
+}
+
+func disable() {
+	operation := "disable"
+	testCommand(operation)
+}
+
+func uninstall() {
+	operation := "uninstall"
+	testCommand(operation)
+}
+
+func update() {
+	operation := "update"
+	testCommand(operation)
 }
 
 func main() {
-	file, err := initLogging()
-	if err != nil {
-		fmt.Printf("Error opening the provided logfile. %+v", err)
+	generalFile, operationFile, loggingErr := initAllLogging()
+	if loggingErr != nil {
+		fmt.Printf("Error opening general logfile %+v", loggingErr)
 		os.Exit(logfileNotOpenedError)
 	}
+	defer generalFile.Close()
+	defer operationFile.Close()
 	//TODO: The file won't open if init logging throws an error, but file.close can also
 	//have errors related to disk writing delays. Will update with more robust error handling
 	//but for now this works well enough
-	defer file.Close()
 
-	extensionMrseq, environmentMrseq, err := sequence.GetMostRecentSequenceNumber()
+	envExtensionVersion := os.Getenv("AZURE_GUEST_AGENT_EXTENSION_VERSION")
+	if envExtensionVersion != "" && envExtensionVersion != version {
+		warningLogger.Printf("Internal version %s does not match with environment variable version %s",
+			version, envExtensionVersion)
+	}
+	var err error
+
+	extensionMrSeq, environmentMrSeq, err = sequence.GetMostRecentSequenceNumber()
 	if err != nil {
-		errorLogger.Printf("%+v", err)
-		os.Exit(mrSeqNotFoundError)
+		warningLogger.Printf("Error getting sequence number %+v", err)
+		extensionMrSeq = -1
+		environmentMrSeq = -1
 	}
-	infoLogger.Printf("Extension MrSeq: %d, Environment MrSeq: %d", extensionMrseq, environmentMrseq)
-
-	shouldRun := sequence.ShouldBeProcessed(extensionMrseq, environmentMrseq)
-	if !shouldRun {
-		errorLogger.Printf("environment mrseq has already been processed by extension (environment mrseq : %v, extension mrseq : %v)\n", environmentMrseq, extensionMrseq)
-		os.Exit(shouldNotRunError)
-	}
-	infoLogger.Printf("Extension should run: %t", shouldRun)
-
-	err = sequence.SetExtensionMostRecentSequenceNumber(environmentMrseq)
-	if err != nil {
-		errorLogger.Printf("%+v", err)
-		os.Exit(seqNumberSetError)
-	}
-
-	err = status.ReportTransitioning(environmentMrseq, "install", "installation in progress")
-	if err != nil {
-		errorLogger.Printf("%+v", err)
-		os.Exit(statusReportingError)
-	}
-
-	var publicSettings PublicSettings
-	var protectedSettings ProtectedSettings
-	err = settings.GetExtensionSettings(environmentMrseq, &publicSettings, &protectedSettings)
-	if err != nil {
-		status.ReportError(environmentMrseq, "install", err.Error())
-		errorLogger.Printf("%+v", err)
-		os.Exit(settingsNotFoundError)
-	}
-	infoLogger.Printf("Public Settings: %v \t Protected Settings: %v", publicSettings, protectedSettings)
-
-	err = status.ReportSuccess(environmentMrseq, "install", "installation is complete")
-	if err != nil {
-		errorLogger.Printf("%+v", err)
-		os.Exit(statusReportingError)
-	}
+	infoLogger.Printf("Extension MrSeq: %d, Environment MrSeq: %d", extensionMrSeq, environmentMrSeq)
 
 	// Command line flags that are currently supported
 	commandStringPtr := flag.String("command", "", "Valid commands are install, enable, update, disable and uninstall. Usage: --command=install")
@@ -192,6 +200,12 @@ func main() {
 
 	// Trigger parsing of the command flag and then run the corresponding command
 	flag.Parse()
+
+	err = parseJSON(*parseJSONPtr)
+	if err != nil {
+		errorLogger.Printf("Error parsing provided JSON file: %+v", err)
+	}
+
 	switch *commandStringPtr {
 	case "disable":
 		disable()
@@ -204,33 +218,12 @@ func main() {
 	case "update":
 		update()
 	case "":
-		warningLogger.Println("No --command flag provided")
+		warningMessage := "No --command flag provided"
+		warningLogger.Println(warningMessage)
 	default:
-		warningLogger.Printf("Command \"%s\" not recognized", *commandStringPtr)
-		os.Exit(commandNotFoundError)
+		warningMessage := fmt.Sprintf("Command \"%s\" not recognized", *commandStringPtr)
+		warningLogger.Println(warningMessage)
 	}
 
-	// Parse the provided JSON file if there is one
-	if *parseJSONPtr != "" {
-		err := parseJSON(*parseJSONPtr)
-		// TODO Add more robust error handling, Github-pkg-errors seems like a good candidate
-		if err != nil {
-			// Gives full traceback: Sample:
-			/* 2020/07/31 22:28:54.962003 main.go:144: Version: 1.0.0.0 ERROR: open tet.json: The system cannot find the file specified.
-			Failed to open "tet.json"
-			main.parseJSON
-				C:/Users/t-etfali/Documents/GuestAgentExtension/guest-agent-test-extension/main.go:52
-			main.main
-				C:/Users/t-etfali/Documents/GuestAgentExtension/guest-agent-test-extension/main.go:141
-			runtime.main
-				c:/go/src/runtime/proc.go:203
-			runtime.goexit
-				c:/go/src/runtime/asm_amd64.s:1373
-			*/
-
-			errorLogger.Printf("%+v", err)
-			os.Exit(generalExitError)
-		}
-	}
-	os.Exit(successfulExecution)
+	reportExecutionStatus()
 }
