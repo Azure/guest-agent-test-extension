@@ -103,7 +103,7 @@ func reportStatus(statusType extensionStatus, operation string, message string) 
 func checkForFailCommand(operation string) {
 	for _, failCommand := range failCommands {
 		if failCommand.Command == operation {
-			reportStatus("error", operation, failCommand.ErrorMessage)
+			reportStatus(statusError, operation, failCommand.ErrorMessage)
 			if failCommand.ExitCode == "" {
 				errorLogger.Printf("%s failed with message: %s, but will not exit since provided exitcode is %s", failCommand.Command, failCommand.ErrorMessage, failCommand.ExitCode)
 			} else if exitCode, err := strconv.Atoi(failCommand.ExitCode); err == nil {
