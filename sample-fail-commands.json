@@ -1,0 +1,22 @@
+# Sample Json file for the failCommands features. The extension will fail all the commands mentioned in this file with the specified ErrorMessage and the ExitCode.
+# This feature is useful to test various failure cases and to ensure the agent is working fine
+# TODO: Read these from the extension's public/private settings rather than a separate file for more flexibility
+{
+    "failCommands": [
+        {
+            "Command": "enable",
+            "ErrorMessage": "Please fail the enable",
+            "ExitCode": "123"
+        },
+        {
+            "Command": "install",
+            "ErrorMessage": "Install failed",
+            "ExitCode": "12"
+        },
+        {
+            "Command": "update",
+            "ErrorMessage": "Fail the update command",
+            "ExitCode": "99"
+        }
+    ]
+}

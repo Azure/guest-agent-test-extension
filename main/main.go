@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/Azure/azure-extension-foundation/sequence"
@@ -34,6 +35,8 @@ var (
 	infoLogger, warningLogger, errorLogger, operationLogger customLogger
 
 	executionErrors []string
+
+	failCommands []failCommandsStruct
 )
 
 const (
@@ -43,6 +46,16 @@ const (
 	commandNotFoundError         // 2
 	logfileNotOpenedError        // 3
 )
+
+type failCommandConfigStruct struct {
+	FailCommands []failCommandsStruct `json:"failCommands"`
+}
+
+type failCommandsStruct struct {
+	Command      string `json:"command"`
+	ErrorMessage string `json:"errorMessage"`
+	ExitCode     string `json:"exitCode"`
+}
 
 // extension specific PublicSettings
 type extensionPublicSettings struct {
@@ -87,15 +100,33 @@ func reportStatus(statusType extensionStatus, operation string, message string) 
 
 }
 
+func checkForFailCommand(operation string) {
+	for _, failCommand := range failCommands {
+		if failCommand.Command == operation {
+			reportStatus(statusError, operation, failCommand.ErrorMessage)
+			if failCommand.ExitCode == "" {
+				errorLogger.Printf("%s failed with message: %s, but will not exit since provided exitcode is %s", failCommand.Command, failCommand.ErrorMessage, failCommand.ExitCode)
+			} else if exitCode, err := strconv.Atoi(failCommand.ExitCode); err == nil {
+				errorLogger.Printf("%s failed with message: %s exitCode: %s", failCommand.Command, failCommand.ErrorMessage, failCommand.ExitCode)
+				os.Exit(exitCode)
+			} else {
+				errorLogger.Printf("Unable to use provided exit code %+v", err)
+				os.Exit(generalExitError)
+			}
+
+		}
+	}
+}
+
 func testCommand(operation string) {
 	infoLogger.Printf("Extension MrSeq: %d, Environment MrSeq: %d", extensionMrSeq, environmentMrSeq)
 	operationLogger.Println(operation)
-
 	reportStatus(statusTransitioning, operation, fmt.Sprintf("%s in progress", operation))
+	checkForFailCommand(operation)
 	reportStatus(statusSuccess, operation, fmt.Sprintf("%s completed successfully", operation))
 }
 
-func parseJSON(filename string) error {
+func parseFailCommandJSONFile(filename string) error {
 	//	Open the provided file
 	jsonFile, err := os.Open(filename)
 	if err != nil {
@@ -107,10 +138,15 @@ func parseJSON(filename string) error {
 	defer jsonFile.Close()
 
 	//	Unmarshall the bytes from the JSON file
-	byteValue, _ := ioutil.ReadAll(jsonFile)
-	var jsonData map[string][]string
-	json.Unmarshal([]byte(byteValue), &jsonData)
+	byteValue, err := ioutil.ReadAll(jsonFile)
+	if err != nil {
+		return errors.Wrapf(err, "Failed to read \"%s\"", filename)
+	}
 
+	var failCommandConfiguration failCommandConfigStruct
+	json.Unmarshal([]byte(byteValue), &failCommandConfiguration)
+
+	failCommands = failCommandConfiguration.FailCommands
 	return nil
 }
 
@@ -135,6 +171,7 @@ func enable() {
 	operationLogger.Println(operation)
 	reportStatus(statusTransitioning, operation, fmt.Sprintf("%s in progress", operation))
 
+	checkForFailCommand(operation)
 	var publicSettings extensionPublicSettings
 	var protectedSettings extensionPrivateSettings
 
@@ -170,7 +207,7 @@ func update() {
 func main() {
 	generalFile, operationFile, loggingErr := initAllLogging()
 	if loggingErr != nil {
-		fmt.Printf("Error opening general logfile %+v", loggingErr)
+		fmt.Printf("Error opening logfile %+v", loggingErr)
 		os.Exit(logfileNotOpenedError)
 	}
 	defer generalFile.Close()
@@ -196,14 +233,15 @@ func main() {
 
 	// Command line flags that are currently supported
 	commandStringPtr := flag.String("command", "", "Valid commands are install, enable, update, disable and uninstall. Usage: --command=install")
-	parseJSONPtr := flag.String("jsonfile", "", "Path to the JSON file loction. Usage --jsonfile=\"test.json\"")
+	failCommandFilePtr := flag.String("failCommandFile", "", "Path to the JSON file loction. Usage --failCommandFile=\"test.json\"")
 
 	// Trigger parsing of the command flag and then run the corresponding command
 	flag.Parse()
-
-	err = parseJSON(*parseJSONPtr)
-	if err != nil {
-		errorLogger.Printf("Error parsing provided JSON file: %+v", err)
+	if *failCommandFilePtr != "" {
+		err = parseFailCommandJSONFile(*failCommandFilePtr)
+		if err != nil {
+			errorLogger.Printf("Error parsing provided JSON file: %+v", err)
+		}
 	}
 
 	switch *commandStringPtr {
