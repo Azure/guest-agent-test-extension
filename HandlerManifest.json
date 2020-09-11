@@ -2,12 +2,12 @@
     "name": "GuestAgentTestExtension",
     "version": 1.0,
     "handlerManifest": {
-      "installCommand": "bin/GuestAgentTestExtension --command=install",
-      "uninstallCommand": "bin/GuestAgentTestExtension --command=uninstall",
-      "updateCommand": "bin/GuestAgentTestExtension --command=update",
-      "enableCommand": "bin/GuestAgentTestExtension --command=enable",
-      "disableCommand": "bin/GuestAgentTestExtension --command=disable",
-      "updateMode": "UpdateWithoutInstall",
+      "installCommand": "bin/GuestAgentTestExtension_linux --command=install",
+      "uninstallCommand": "bin/GuestAgentTestExtension_linux --command=uninstall",
+      "updateCommand": "bin/GuestAgentTestExtension_linux --command=update",
+      "enableCommand": "bin/GuestAgentTestExtension_linux --command=enable",
+      "disableCommand": "bin/GuestAgentTestExtension_linux --command=disable",
+      "updateMode": "UpdateWithInstall",
       "rebootAfterInstall": false,
       "reportHeartbeat": false
     }
