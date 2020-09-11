@@ -233,10 +233,11 @@ func main() {
 
 	// Trigger parsing of the command flag and then run the corresponding command
 	flag.Parse()
-
-	err = parseJSON(*parseJSONPtr)
-	if err != nil {
-		errorLogger.Printf("Error parsing provided JSON file: %+v", err)
+	if *parseJSONPtr != "" {
+		err = parseJSON(*parseJSONPtr)
+		if err != nil {
+			errorLogger.Printf("Error parsing provided JSON file: %+v", err)
+		}
 	}
 
 	switch *commandStringPtr {
