@@ -36,8 +36,7 @@ var (
 
 	executionErrors []string
 
-	extensionConfiguration extensionConfigurationStruct
-	failCommands           []failCommandsStruct
+	failCommands []failCommandsStruct
 )
 
 const (
@@ -48,7 +47,7 @@ const (
 	logfileNotOpenedError        // 3
 )
 
-type extensionConfigurationStruct struct {
+type failCommandConfigStruct struct {
 	FailCommands []failCommandsStruct `json:"failCommands"`
 }
 
@@ -127,7 +126,7 @@ func testCommand(operation string) {
 	reportStatus(statusSuccess, operation, fmt.Sprintf("%s completed successfully", operation))
 }
 
-func parseJSON(filename string) error {
+func parseFailCommandJSONFile(filename string) error {
 	//	Open the provided file
 	jsonFile, err := os.Open(filename)
 	if err != nil {
@@ -139,10 +138,15 @@ func parseJSON(filename string) error {
 	defer jsonFile.Close()
 
 	//	Unmarshall the bytes from the JSON file
-	byteValue, _ := ioutil.ReadAll(jsonFile)
-	json.Unmarshal([]byte(byteValue), &extensionConfiguration)
+	byteValue, err := ioutil.ReadAll(jsonFile)
+	if err != nil {
+		return errors.Wrapf(err, "Failed to read \"%s\"", filename)
+	}
 
-	failCommands = extensionConfiguration.FailCommands
+	var failCommandConfiguration failCommandConfigStruct
+	json.Unmarshal([]byte(byteValue), &failCommandConfiguration)
+
+	failCommands = failCommandConfiguration.FailCommands
 	return nil
 }
 
@@ -229,12 +233,12 @@ func main() {
 
 	// Command line flags that are currently supported
 	commandStringPtr := flag.String("command", "", "Valid commands are install, enable, update, disable and uninstall. Usage: --command=install")
-	parseJSONPtr := flag.String("jsonfile", "", "Path to the JSON file loction. Usage --jsonfile=\"test.json\"")
+	failCommandFilePtr := flag.String("failCommandFile", "", "Path to the JSON file loction. Usage --failCommandFile=\"test.json\"")
 
 	// Trigger parsing of the command flag and then run the corresponding command
 	flag.Parse()
-	if *parseJSONPtr != "" {
-		err = parseJSON(*parseJSONPtr)
+	if *failCommandFilePtr != "" {
+		err = parseFailCommandJSONFile(*failCommandFilePtr)
 		if err != nil {
 			errorLogger.Printf("Error parsing provided JSON file: %+v", err)
 		}
