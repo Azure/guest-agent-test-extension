@@ -8,6 +8,7 @@ GORUN=${GOCMD} run
 BINARY_NAME=bin/GuestAgentTestExtension
 WINDOWS_BIN=$(BINARY_NAME)_windows.exe
 LINUX_BIN=$(BINARY_NAME)_linux
+SERVICE_SCRIPT_BIN=bin/gatestext_script_linux
 
 .PHONY: all
 all: clean build_all
@@ -29,6 +30,7 @@ build_windows:
 build_linux:
 	$(GOCMD) env GOOS=linux
 	${GOBUILD} -o  ${LINUX_BIN} ./main/
+	${GOBUILD} -o  ${SERVICE_SCRIPT_BIN} ./services/
 
 .PHONY: build_all_with_deps
 build_all_with_deps: deps build_all

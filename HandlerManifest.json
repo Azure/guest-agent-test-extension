@@ -10,5 +10,13 @@
       "updateMode": "UpdateWithInstall",
       "rebootAfterInstall": false,
       "reportHeartbeat": false
+    },
+    "resourceLimits": {
+      "services": [
+          {
+              "name": "gatestext.service",
+              "path": "/lib/systemd/system"
+          }
+      ]
     }
-  }]
+}]
