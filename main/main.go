@@ -165,7 +165,7 @@ func reportExecutionStatus() {
 func install() {
 	operation := "install"
 	path, _ := os.Getwd()
-	_, err := exec.Command("/bin/sh", filepath.Join(path, "scripts/service_install.sh")).Output()
+	_, err := exec.Command("sudo", filepath.Join(path, "scripts/service_install.sh")).Output()
 	if err != nil {
 		errorMessage := fmt.Sprintf("Error installing service: %+v", err)
 		errorLogger.Println(errorMessage)
@@ -176,7 +176,7 @@ func install() {
 func enable() {
 	operation := "enable"
 	path, _ := os.Getwd()
-	_, err1 := exec.Command("/bin/sh", filepath.Join(path, "scripts/service_enable.sh")).Output()
+	_, err1 := exec.Command("sudo", filepath.Join(path, "scripts/service_enable.sh")).Output()
 	if err1 != nil {
 		errorMessage := fmt.Sprintf("Error starting service: %+v", err1)
 		errorLogger.Println(errorMessage)
@@ -211,7 +211,7 @@ func disable() {
 func uninstall() {
 	operation := "uninstall"
 	path, _ := os.Getwd()
-	_, err := exec.Command("/bin/sh", filepath.Join(path, "scripts/service_uninstall.sh")).Output()
+	_, err := exec.Command("sudo", filepath.Join(path, "scripts/service_uninstall.sh")).Output()
 	if err != nil {
 		errorMessage := fmt.Sprintf("Error uninstalling service: %+v", err)
 		errorLogger.Println(errorMessage)
