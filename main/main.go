@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
     "path/filepath"
+	"runtime"
 
 	"github.com/Azure/azure-extension-foundation/sequence"
 	"github.com/Azure/azure-extension-foundation/settings"
@@ -164,22 +165,26 @@ func reportExecutionStatus() {
 
 func install() {
 	operation := "install"
-	path, _ := os.Getwd()
-	_, err := exec.Command("sudo", filepath.Join(path, "scripts/service_install.sh")).Output()
-	if err != nil {
-		errorMessage := fmt.Sprintf("Error installing service: %+v", err)
-		errorLogger.Println(errorMessage)
+	if runtime.GOOS == "linux" {
+		path, _ := os.Getwd()
+		_, err := exec.Command("sudo", filepath.Join(path, "scripts/service_install.sh")).Output()
+		if err != nil {
+			errorMessage := fmt.Sprintf("Error installing service: %+v", err)
+			errorLogger.Println(errorMessage)
+		}
 	}
 	testCommand(operation)
 }
 
 func enable() {
 	operation := "enable"
-	path, _ := os.Getwd()
-	_, err1 := exec.Command("sudo", filepath.Join(path, "scripts/service_enable.sh")).Output()
-	if err1 != nil {
-		errorMessage := fmt.Sprintf("Error starting service: %+v", err1)
-		errorLogger.Println(errorMessage)
+	if runtime.GOOS == "linux" {
+		path, _ := os.Getwd()
+		_, err1 := exec.Command("sudo", filepath.Join(path, "scripts/service_enable.sh")).Output()
+		if err1 != nil {
+			errorMessage := fmt.Sprintf("Error starting service: %+v", err1)
+			errorLogger.Println(errorMessage)
+		}
 	}
 	infoLogger.Printf("Extension MrSeq: %d, Environment MrSeq: %d", extensionMrSeq, environmentMrSeq)
 	operationLogger.Println(operation)
@@ -210,11 +215,13 @@ func disable() {
 
 func uninstall() {
 	operation := "uninstall"
-	path, _ := os.Getwd()
-	_, err := exec.Command("sudo", filepath.Join(path, "scripts/service_uninstall.sh")).Output()
-	if err != nil {
-		errorMessage := fmt.Sprintf("Error uninstalling service: %+v", err)
-		errorLogger.Println(errorMessage)
+	if runtime.GOOS == "linux" {
+		path, _ := os.Getwd()
+		_, err := exec.Command("sudo", filepath.Join(path, "scripts/service_uninstall.sh")).Output()
+		if err != nil {
+			errorMessage := fmt.Sprintf("Error uninstalling service: %+v", err)
+			errorLogger.Println(errorMessage)
+		}
 	}
 	testCommand(operation)
 }
