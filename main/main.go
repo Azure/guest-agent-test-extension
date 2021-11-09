@@ -20,9 +20,9 @@ import (
 
 var (
 	versionMajor    = "1"
-	versionMinor    = "0"
+	versionMinor    = "1"
 	versionBuild    = "0"
-	versionRevision = "2"
+	versionRevision = "0"
 	version         = fmt.Sprintf("%s.%s.%s.%s", versionMajor, versionMinor, versionBuild, versionRevision)
 
 	extensionMrSeq   int
