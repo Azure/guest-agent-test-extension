@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euxo pipefail
 
 service_name="gatestext.service"
 

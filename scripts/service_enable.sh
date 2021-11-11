@@ -2,4 +2,6 @@
 
 service_name="gatestext.service"
 
-systemctl is-active $service_name | grep "inactive" && systemctl start $service_name
+if systemctl is-active $service_name | grep -q "inactive"; then
+    systemctl start $service_name
+fi
