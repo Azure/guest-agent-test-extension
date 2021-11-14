@@ -168,7 +168,7 @@ func install() {
 	if runtime.GOOS == "linux" {
 		path, _ := os.Getwd()
 		output, err := exec.Command("sudo", filepath.Join(path, "scripts/service_install.sh")).Output()
-		infoLogger.Println(fmt.Sprintf("service install script output: %+v", output))
+		infoLogger.Println(fmt.Sprintf("service install script output: %s", output))
 		if err != nil {
 			errorMessage := fmt.Sprintf("Error installing service: %+v", err)
 			errorLogger.Println(errorMessage)
@@ -183,7 +183,7 @@ func enable() {
 	if runtime.GOOS == "linux" {
 		path, _ := os.Getwd()
 		output, err1 := exec.Command("sudo", filepath.Join(path, "scripts/service_enable.sh")).Output()
-		infoLogger.Println(fmt.Sprintf("service enable script output: %+v", output))
+		infoLogger.Println(fmt.Sprintf("service enable script output: %s", output))
 		if err1 != nil {
 			errorMessage := fmt.Sprintf("Error starting service: %+v", err1)
 			errorLogger.Println(errorMessage)
@@ -221,7 +221,7 @@ func uninstall() {
 	if runtime.GOOS == "linux" {
 		path, _ := os.Getwd()
 		output, err := exec.Command("sudo", filepath.Join(path, "scripts/service_uninstall.sh")).Output()
-		infoLogger.Println(fmt.Sprintf("service uninstall script output: %+v", output))
+		infoLogger.Println(fmt.Sprintf("service uninstall script output: %s", output))
 		if err != nil {
 			errorMessage := fmt.Sprintf("Error uninstalling service: %+v", err)
 			errorLogger.Println(errorMessage)

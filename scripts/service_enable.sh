@@ -1,7 +1,6 @@
 #!/bin/bash
+set -euxo pipefail
 
 service_name="gatestext.service"
 
-if systemctl is-active $service_name | grep -q "inactive"; then
-    systemctl start $service_name
-fi
+systemctl is-active $service_name | grep -q "active" || systemctl start $service_name
