@@ -3,7 +3,7 @@ Description=GATestExt service running a go script
 
 [Service]
 Type=simple
-ExecStart={WORKDIR}/bin/gatestext_script_linux
+ExecStart=/usr/local/bin/gatestext_script_linux
 Restart=always
 
 [Install]

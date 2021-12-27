@@ -7,3 +7,6 @@ bin/*
 
 # Ignore the testing config json
 ./test.json
+
+# Igonre IDE files
+.idea/*
