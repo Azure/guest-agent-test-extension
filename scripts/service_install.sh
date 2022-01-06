@@ -5,6 +5,6 @@ service_name="gatestext.service"
 
 dir=$(pwd)
 cp $dir/bin/gatestext_script_linux /usr/local/bin
-eval "sed s#{WORKDIR}#$dir# $dir/services/gatestext.service > /lib/systemd/system/gatestext.service"
-chmod 644 /lib/systemd/system/$service_name
+cp $dir/services/gatestext.service $1
+chmod 644 $1/$service_name
 systemctl daemon-reload

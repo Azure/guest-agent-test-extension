@@ -14,8 +14,7 @@
     "resourceLimits": {
       "services": [
           {
-              "name": "gatestext.service",
-              "path": "/lib/systemd/system"
+              "name": "gatestext.service"
           }
       ]
     }
