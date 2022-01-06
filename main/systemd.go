@@ -6,6 +6,7 @@ import (
     "os/exec"
     "strings"
     "path/filepath"
+    "errors"
 )
 
 func contains(distros []string, distro string) bool {
@@ -19,23 +20,28 @@ func contains(distros []string, distro string) bool {
     return false
 }
 
-func get_distro() string {
+func getDistro() (string, error) {
     path, _ := os.Getwd()
     output, err := exec.Command("sudo", filepath.Join(path, "scripts/distro_script.sh")).Output()
     if err != nil {
-        errorMessage := fmt.Sprintf("Error getting distro name: %+v", err)
-		errorLogger.Println(errorMessage)
+        return "", errors.Wrapf(err, "error running shell script")
     }
     distroName := strings.ToLower(string(output))
-    infoLogger.Println(fmt.Sprintf("distro name: %s", distroName))
-    return distroName
+    return distroName, nil
 }
 
-func getSystemdUnitFileInstallPath() string {
+func GetSystemdUnitFileInstallPath() string {
 
     var systemdPath string
 
-    distro := get_distro()
+    distro, err := getDistro()
+
+    if (err != nil) {
+        errorMessage := fmt.Sprintf("Error getting distro name: %+v : %s", err, err.Error())
+	    errorLogger.Println(errorMessage)
+    } else {
+        infoLogger.Println(fmt.Sprintf("distro name: %s", distro))
+    }
 
     distros1 :=[]string{"ubuntu", "debian"}
     distros2 :=[]string{"suse", "sle_hpc", "sles", "opensuse", "redhat", "rhel", "centos", "oracle"}

@@ -167,7 +167,7 @@ func install() {
 	operation := "install"
 	if runtime.GOOS == "linux" {
 		path, _ := os.Getwd()
-		systemdPath := getSystemdUnitFileInstallPath()
+		systemdPath := GetSystemdUnitFileInstallPath()
 		output, err := exec.Command("sudo", filepath.Join(path, "scripts/service_install.sh"), systemdPath).Output()
 		infoLogger.Println(fmt.Sprintf("service install script output: %s", output))
 		if err != nil {
