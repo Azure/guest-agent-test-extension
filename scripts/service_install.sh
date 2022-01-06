@@ -1,6 +1,9 @@
 #!/bin/bash
 set -euxo pipefail
 
+#           $1          $2
+# Usage:  SystemdPath
+
 service_name="gatestext.service"
 
 dir=$(pwd)

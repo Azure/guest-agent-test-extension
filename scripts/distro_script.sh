@@ -1,9 +1,6 @@
 #!/bin/bash
 set -euo pipefail
 
-#           $1          $2
-# Usage:  SystemdPath
-
 distro=None
 if [ -f /etc/os-release ]; then
     # freedesktop and systemd
