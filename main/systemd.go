@@ -43,12 +43,12 @@ func GetSystemdUnitFileInstallPath() string {
         infoLogger.Println(fmt.Sprintf("distro name: %s", distro))
     }
 
-    identicalSystemdPathDistros1 :=[]string{"ubuntu", "debian"}
-    identicalSystemdPathDistros2 :=[]string{"suse", "sle_hpc", "sles", "opensuse", "redhat", "rhel", "centos", "oracle"}
+    debianDistros :=[]string{"ubuntu", "debian"}
+    redhatDistros :=[]string{"suse", "sle_hpc", "sles", "opensuse", "redhat", "rhel", "centos", "oracle"}
 
-    if contains(identicalSystemdPathDistros1, distro) {
+    if contains(debianDistros, distro) {
         systemdPath = "/lib/systemd/system"
-    } else if contains(identicalSystemdPathDistros2, distro) {
+    } else if contains(redhatDistros, distro) {
         systemdPath = "/usr/lib/systemd/system"
     } else {
         systemdPath = "/lib/systemd/system"
