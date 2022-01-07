@@ -6,7 +6,7 @@ import (
     "os/exec"
     "strings"
     "path/filepath"
-    "errors"
+    "github.com/pkg/errors"
 )
 
 func contains(distros []string, distro string) bool {
