@@ -14,8 +14,12 @@
     "resourceLimits": {
       "services": [
           {
-              "name": "gatestext.service"
+              "name": "gatestext.service",
+              "cpuQuotaPercentage" : 20,
+              "memoryQuotaInMB" : 30
           }
-      ]
+      ],
+      "cpuQuotaPercentage" : 10,
+      "memoryQuotaInMB" : 20
     }
 }]
