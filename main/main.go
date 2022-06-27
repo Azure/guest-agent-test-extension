@@ -22,7 +22,7 @@ var (
 	versionMajor    = "1"
 	versionMinor    = "1"
 	versionBuild    = "1"
-	versionRevision = "0"
+	versionRevision = "1"
 	version         = fmt.Sprintf("%s.%s.%s.%s", versionMajor, versionMinor, versionBuild, versionRevision)
 
 	extensionMrSeq   int
