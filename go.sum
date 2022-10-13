@@ -1,0 +1,4 @@
+github.com/Azure/azure-extension-foundation v0.0.0-20190726000431-02f4f599e64a h1:dU4O2MKIUGQ9JeJf6yyBLXwA1wso5zu1wLcz0pQggbc=
+github.com/Azure/azure-extension-foundation v0.0.0-20190726000431-02f4f599e64a/go.mod h1:a0BFq9UoWBHvBS7iagvjFqBjYfxtBsmqvCLWIHRq9b0=
+github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
+github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
