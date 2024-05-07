@@ -23,12 +23,12 @@ build_all: build_windows build_linux
 
 .PHONY: build_windows
 build_windows:
-	$(GOCMD) env GOOS=windows 
+	$(GOCMD) env -w GOOS=windows 
 	${GOBUILD} -o ${WINDOWS_BIN} ./main/
 
 .PHONY: build_linux
 build_linux:
-	$(GOCMD) env GOOS=linux
+	$(GOCMD) env -w GOOS=linux
 	${GOBUILD} -o  ${LINUX_BIN} ./main/
 	${GOBUILD} -o  ${SERVICE_SCRIPT_BIN} ./services/
 
